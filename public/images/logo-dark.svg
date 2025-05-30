@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="200" height="60" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .text { font-family: Arial, sans-serif; font-weight: bold; }
+    .main-text { font-size: 36px; fill: #A5B4FC; }
+    .tagline { font-size: 12px; fill: #E5E7EB; }
+  </style>
+  <text x="10" y="40" class="text main-text">DIGGR</text>
+  <text x="12" y="55" class="text tagline">AI-powered music discovery</text>
+</svg> 

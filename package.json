@@ -1,0 +1,43 @@
+{
+  "name": "diggr",
+  "version": "1.0.0",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "NODE_OPTIONS='--max_old_space_size=4096' next build --no-lint",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:migrate": "node supabase/run-migrations.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/supabase-js": "^2.49.8",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "clsx": "^2.1.1",
+    "critters": "^0.0.23",
+    "dotenv": "^16.5.0",
+    "framer-motion": "^10.18.0",
+    "next": "^14.1.0",
+    "openai": "^4.103.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.56.4",
+    "react-hot-toast": "^2.5.2",
+    "stripe": "^14.12.0",
+    "tailwind-merge": "^2.2.0",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.23",
+    "sharp": "^0.34.2",
+    "tailwindcss": "^3.3.0"
+  }
+}
