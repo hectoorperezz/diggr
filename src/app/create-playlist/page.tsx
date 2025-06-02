@@ -116,10 +116,26 @@ export default function CreatePlaylistPage() {
     }
     
     setIsLoading(true);
-    setCreationStep('generating');
-    setCreationProgress(10);
     
     try {
+      // Check if user can create more playlists based on subscription
+      const quotaResponse = await fetch('/api/user/subscription');
+      if (!quotaResponse.ok) {
+        throw new Error('Failed to check subscription status');
+      }
+      
+      const quota = await quotaResponse.json();
+      
+      // If user is on free plan and has reached limit, redirect to pricing page
+      if (!quota.isPremium && quota.playlistsCreated >= quota.playlistLimit) {
+        toast.error(`You've reached the limit of ${quota.playlistLimit} playlists this month. Upgrade to Pro for unlimited playlists!`);
+        router.push('/pricing?reason=playlist_limit');
+        return;
+      }
+      
+      setCreationStep('generating');
+      setCreationProgress(10);
+      
       // Step 1: Generate recommendations with OpenAI
       setCreationStep('generating');
       setCreationProgress(20);

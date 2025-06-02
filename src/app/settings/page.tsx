@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [spotifyStatus, setSpotifyStatus] = useState<boolean | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [subscriptionData, setSubscriptionData] = useState<any>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -40,6 +41,35 @@ export default function SettingsPage() {
       refreshSession();
     }
   }, [isClient, session, user, refreshSession]);
+
+  // Fetch subscription data
+  useEffect(() => {
+    async function fetchSubscriptionData() {
+      if (!user) return;
+      
+      try {
+        console.log('Settings: Fetching subscription data');
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/user/subscription?t=${timestamp}`, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Settings: Subscription data received:', data);
+          setSubscriptionData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching subscription data in settings:', error);
+      }
+    }
+    
+    fetchSubscriptionData();
+  }, [user]);
 
   // Determine Spotify connection status from userProfile or database
   const determineSpotifyStatus = useCallback(async () => {
@@ -407,6 +437,137 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+          
+          {/* Subscription Management */}
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+          >
+            <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-purple-500/30 via-[#1DB954]/30 to-purple-500/30 opacity-70 blur-lg"></div>
+            <motion.div 
+              className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-md border border-white/5 p-8 rounded-2xl"
+              whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            >
+              <div className="flex items-center mb-4">
+                <h2 className="text-xl font-semibold">Subscription Plan</h2>
+                <div className="ml-4">
+                  <div className="bg-black/30 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10">
+                    <div className="flex items-center">
+                      <div className={`w-3 h-3 ${subscriptionData?.isPremium ? 'bg-[#1DB954]' : 'bg-[#A3A3A3]'} rounded-full mr-2`}></div>
+                      <span className="font-medium">{subscriptionData?.isPremium ? 'Pro Plan' : 'Free Plan'}</span>
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-[#A3A3A3] mt-4">
+                    {subscriptionData?.isPremium 
+                      ? 'Enjoy unlimited playlists and no ads.' 
+                      : 'Limited to 5 playlists per month with ads.'}
+                  </p>
+                  
+                  {subscriptionData?.isPremium && subscriptionData?.subscription?.currentPeriodEnd && (
+                    <p className="text-sm text-[#A3A3A3] mt-2">
+                      Your subscription renews on {new Date(subscriptionData.subscription.currentPeriodEnd).toLocaleDateString()}.
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Subscription Plan</h3>
+                  <div className="bg-black/30 backdrop-blur-md rounded-xl px-6 py-4 border border-white/10">
+                    <div className="flex items-center">
+                      <div className={`w-3 h-3 ${subscriptionData?.isPremium ? 'bg-[#1DB954]' : 'bg-[#A3A3A3]'} rounded-full mr-2`}></div>
+                      <span className="font-medium">{subscriptionData?.isPremium ? 'Pro Plan' : 'Free Plan'}</span>
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-[#A3A3A3] mt-4">
+                    {subscriptionData?.isPremium 
+                      ? 'Enjoy unlimited playlists and no ads.' 
+                      : 'Limited to 5 playlists per month with ads.'}
+                  </p>
+                  
+                  {subscriptionData?.isPremium && subscriptionData?.subscription?.currentPeriodEnd && (
+                    <p className="text-sm text-[#A3A3A3] mt-2">
+                      Your subscription renews on {new Date(subscriptionData.subscription.currentPeriodEnd).toLocaleDateString()}.
+                    </p>
+                  )}
+                </div>
+                
+                <div>
+                  {subscriptionData?.isPremium ? (
+                    <Button 
+                      onClick={async () => {
+                        try {
+                          const response = await fetch('/api/subscriptions/portal', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              returnUrl: `${window.location.origin}/settings`,
+                            }),
+                          });
+                          
+                          const data = await response.json();
+                          
+                          if (data.url) {
+                            window.location.href = data.url;
+                          } else {
+                            throw new Error('No portal URL returned');
+                          }
+                        } catch (error) {
+                          console.error('Error opening subscription portal:', error);
+                          toast.error('Failed to open subscription management');
+                        }
+                      }}
+                      variant="primary"
+                      size="md"
+                    >
+                      Manage Subscription
+                    </Button>
+                  ) : (
+                    <Button 
+                      href="/pricing"
+                      variant="primary"
+                      size="md"
+                    >
+                      Upgrade to Pro
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              {subscriptionData?.isPremium ? (
+                <div className="bg-[#1DB954]/10 border border-[#1DB954]/20 rounded-xl p-4">
+                  <div className="flex items-center">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#1DB954] mr-3">
+                      <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M9 12.5714L11 14.5714L15.5 10.0714" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span className="text-[#1DB954]">You have access to all Pro features: unlimited playlists, no ads, and premium recommendations!</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gradient-to-r from-purple-500/10 to-[#1DB954]/10 border border-white/10 rounded-xl p-4">
+                  <div className="flex items-center">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-purple-400 mr-3">
+                      <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 16V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 8H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span className="text-white">
+                      Upgrade to Pro for unlimited playlists, no ads, and premium recommendations!
+                    </span>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </motion.div>
           

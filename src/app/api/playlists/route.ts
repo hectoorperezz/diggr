@@ -5,6 +5,11 @@ import { refreshAccessToken, getPlaylist } from '@/lib/spotify/client';
 
 export async function GET(request: NextRequest) {
   try {
+    // Get the limit parameter from the request
+    const url = new URL(request.url);
+    const limitParam = url.searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+    
     // Create Supabase client for authentication
     const supabase = createRouteHandlerClient({ cookies });
     
@@ -32,7 +37,8 @@ export async function GET(request: NextRequest) {
       .from('playlists')
       .select('*')
       .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit || 50); // Apply the limit if provided
     
     if (error) {
       console.error('Error fetching playlists:', error);
@@ -91,9 +97,9 @@ export async function GET(request: NextRequest) {
       playlists: playlists || [] 
     });
   } catch (error: any) {
-    console.error('Error fetching playlists:', error);
-    return NextResponse.json({
-      error: error.message || 'An unexpected error occurred'
+    console.error('Error in playlists API:', error);
+    return NextResponse.json({ 
+      error: error.message || 'An unexpected error occurred' 
     }, { status: 500 });
   }
 } 

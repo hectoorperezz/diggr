@@ -35,7 +35,7 @@ export default function Home() {
         <div className="absolute top-0 -left-40 w-96 h-96 bg-gradient-to-br from-purple-500/20 via-[#1DB954]/20 to-transparent rounded-full filter blur-3xl opacity-50 animate-blob"></div>
         <div className="absolute top-0 -right-40 w-96 h-96 bg-gradient-to-br from-[#1DB954]/20 via-purple-500/20 to-transparent rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-gradient-to-br from-purple-500/20 via-[#1DB954]/20 to-transparent rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
-      </div>
+        </div>
       
       {/* Header */}
       <motion.header 
@@ -67,11 +67,11 @@ export default function Home() {
               About
             </Link>
             <Link href="/auth/login" className="btn-outline text-sm md:text-base">
-              Login
-            </Link>
+            Login
+          </Link>
             <Link href="/auth/register" className="btn-primary text-sm md:text-base">
-              Sign Up
-            </Link>
+            Sign Up
+          </Link>
           </motion.nav>
         </div>
       </motion.header>
@@ -129,7 +129,7 @@ export default function Home() {
                 <div className="absolute inset-0 w-full h-full bg-white/10 group-hover:scale-105 transition-transform duration-300"></div>
                 <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
                 <span className="relative z-20 px-8 py-3 inline-block font-medium text-white">Try Demo</span>
-              </Link>
+          </Link>
             </motion.div>
           </motion.div>
         </div>
@@ -198,8 +198,8 @@ export default function Home() {
               <div className="absolute inset-0 flex items-center justify-end px-4">
                 <span className="text-xs text-white/70">Matching your taste...</span>
               </div>
-            </div>
-            
+        </div>
+
             <div className="flex justify-center">
               <motion.div
                 whileHover={{ scale: 1.05 }}
@@ -549,6 +549,146 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section className="py-24 px-4 sm:px-8 w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Choose Your Plan</h2>
+            <p className="text-[#A3A3A3] max-w-2xl mx-auto">
+              Select the perfect plan that fits your music discovery needs
+            </p>
+            <div className="h-1 w-20 bg-gradient-to-r from-[#1DB954] to-purple-500 mx-auto mt-6 rounded-full"></div>
+          </motion.div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto">
+            {/* Free Plan */}
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7 }}
+              viewport={{ once: true, margin: "-100px" }}
+            >
+              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-white/20 to-purple-500/20 opacity-50 blur-lg"></div>
+              <motion.div 
+                className="relative bg-[#111111] rounded-3xl border border-white/5 p-8 h-full"
+                whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <div className="bg-white/5 rounded-full px-4 py-1 inline-block mb-6">
+                  <span className="text-sm font-medium">Free Plan</span>
+                </div>
+                
+                <h3 className="text-3xl font-bold mb-2">$0</h3>
+                <p className="text-[#A3A3A3] mb-8">Forever free</p>
+                
+                <div className="h-px w-full bg-white/5 my-6"></div>
+                
+                <ul className="space-y-4 mb-8">
+                  {[
+                    "5 playlists per month",
+                    "Basic AI recommendations",
+                    "Spotify integration",
+                    "Includes ads",
+                    "Community support"
+                  ].map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <div className="text-[#1DB954] mr-3 mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Link href="/auth/register" className="w-full relative group overflow-hidden inline-block rounded-full text-center">
+                    <div className="absolute inset-0 bg-white/10 group-hover:scale-105 transition-transform duration-300"></div>
+                    <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                    <span className="relative z-20 py-3 inline-block w-full font-medium text-white">Get Started</span>
+                  </Link>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+            
+            {/* Pro Plan */}
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.2 }}
+              viewport={{ once: true, margin: "-100px" }}
+            >
+              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#1DB954]/40 to-purple-500/40 opacity-70 blur-lg"></div>
+              <motion.div 
+                className="relative bg-[#111111] rounded-3xl border border-[#1DB954]/20 p-8 h-full"
+                whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                {/* Popular Tag */}
+                <div className="absolute -top-4 -right-4">
+                  <div className="bg-gradient-to-r from-[#1DB954] to-purple-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-lg">
+                    POPULAR
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-[#1DB954]/20 to-purple-500/20 rounded-full px-4 py-1 inline-block mb-6">
+                  <span className="text-sm font-medium text-[#1DB954]">Pro Plan</span>
+                </div>
+                
+                <h3 className="text-3xl font-bold mb-2">$9.99</h3>
+                <p className="text-[#A3A3A3] mb-8">per month</p>
+                
+                <div className="h-px w-full bg-white/5 my-6"></div>
+                
+                <ul className="space-y-4 mb-8">
+                  {[
+                    "Unlimited playlists",
+                    "Advanced AI recommendations",
+                    "Spotify integration",
+                    "No ads",
+                    "Priority support",
+                    "Advanced customization options",
+                    "Early access to new features"
+                  ].map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <div className="text-[#1DB954] mr-3 mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Link href="/auth/register" className="w-full relative group overflow-hidden inline-block rounded-full text-center">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954] to-purple-500 group-hover:scale-105 transition-transform duration-300"></div>
+                    <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                    <span className="relative z-20 py-3 inline-block w-full font-medium text-white">Upgrade Now</span>
+                  </Link>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-20 px-4 sm:px-8 w-full">
         <motion.div 
@@ -707,7 +847,7 @@ export default function Home() {
                   <li key={link}>
                     <Link href={`/${link.toLowerCase().replace(' ', '-')}`} className="text-[#A3A3A3] hover:text-[#1DB954] transition-colors">
                       {link}
-                    </Link>
+            </Link>
                   </li>
                 ))}
               </ul>
@@ -726,7 +866,7 @@ export default function Home() {
                   <li key={link}>
                     <Link href={`/${link.toLowerCase().replace(/ /g, '-')}`} className="text-[#A3A3A3] hover:text-[#1DB954] transition-colors">
                       {link}
-                    </Link>
+            </Link>
                   </li>
                 ))}
               </ul>

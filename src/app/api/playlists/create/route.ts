@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { refreshAccessToken, createPlaylist, addTracksToPlaylist, getCurrentUser, uploadPlaylistCover, getPlaylist } from '@/lib/spotify/client';
+import { canCreateMorePlaylists } from '@/lib/stripe/subscription';
 
 export async function POST(request: NextRequest) {
   console.log('Playlist creation request received');
@@ -41,26 +42,15 @@ export async function POST(request: NextRequest) {
 
     console.log('User authenticated:', session.user.id);
 
-    // Check if user has reached their playlist limit
-    try {
-      const { data: canCreate, error: limitError } = await supabase.rpc(
-        'check_user_playlist_limit',
-        { user_id_param: session.user.id }
-      );
-      
-      if (limitError) {
-        console.error('Error checking playlist limit:', limitError);
-        // Continue anyway, we'll assume they can create the playlist
-      } else if (canCreate === false) {
-        console.log('User has reached their playlist limit');
-        return NextResponse.json({
-          error: 'Monthly playlist limit reached',
-          limitReached: true
-        }, { status: 403 });
-      }
-    } catch (limitCheckError) {
-      console.error('Exception checking playlist limit:', limitCheckError);
-      // Continue anyway
+    // Check subscription and playlist limits
+    const canCreate = await canCreateMorePlaylists(session.user.id);
+    if (!canCreate) {
+      console.log('User has reached their playlist limit based on subscription');
+      return NextResponse.json({
+        error: 'Monthly playlist limit reached',
+        limitReached: true,
+        needsUpgrade: true
+      }, { status: 403 });
     }
 
     // Check if user has Spotify connected
