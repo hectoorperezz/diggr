@@ -14,6 +14,12 @@ export default function SpotifyDebugPage() {
   useEffect(() => {
     async function debugTokenExchange() {
       try {
+        if (!searchParams) {
+          setError('Search parameters not available');
+          setIsLoading(false);
+          return;
+        }
+        
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         const startTime = Date.now();

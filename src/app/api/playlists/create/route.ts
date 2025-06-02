@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     console.log('Tracks added to playlist successfully');
     
     // Upload cover image if provided
-    let updatedImageUrl = null;
+    let updatedImageUrl: string | null = null;
     if (coverImage) {
       try {
         console.log('Uploading custom cover image');

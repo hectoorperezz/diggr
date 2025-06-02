@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       
       // Process batch results
       for (const result of batchResults) {
-        if (result.status === 'found' || result.status === 'fallback') {
+        if ((result.status === 'found' || result.status === 'fallback') && result.track) {
           spotifyTracks.push(result.track);
         } else {
           failedTracks.push(result);

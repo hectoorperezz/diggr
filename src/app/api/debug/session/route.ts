@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { PostgrestError } from '@supabase/supabase-js';
+
+// Define the user data type
+interface UserData {
+  id: string;
+  email: string;
+  spotify_connected: boolean;
+  created_at: string;
+  [key: string]: any; // Allow for other properties
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,8 +21,8 @@ export async function GET(request: NextRequest) {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     // Check database connection by querying the users table
-    let userError = null;
-    let userData = null;
+    let userError: PostgrestError | null = null;
+    let userData: UserData | null = null;
     
     if (session?.user) {
       const { data, error } = await supabase
@@ -21,7 +31,7 @@ export async function GET(request: NextRequest) {
         .eq('id', session.user.id)
         .single();
         
-      userData = data;
+      userData = data as UserData;
       userError = error;
     }
     

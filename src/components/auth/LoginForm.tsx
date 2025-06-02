@@ -16,6 +16,8 @@ export function LoginForm() {
   
   // Check for error parameter in URL
   useEffect(() => {
+    if (!searchParams) return;
+    
     const errorParam = searchParams.get('error');
     if (errorParam) {
       setError(decodeURIComponent(errorParam));
