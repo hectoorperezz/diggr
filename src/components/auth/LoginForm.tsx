@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
 import { toast } from 'react-hot-toast';
 
-export function LoginForm() {
+// Separate component to use searchParams
+function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, session } = useSupabase();
@@ -134,5 +135,27 @@ export function LoginForm() {
         </div>
       </form>
     </div>
+  );
+}
+
+// Loading fallback for Suspense
+function LoginFormFallback() {
+  return (
+    <div className="w-full max-w-md mx-auto p-4 text-center">
+      <div className="animate-pulse">
+        <div className="h-10 bg-gray-700 rounded mb-4"></div>
+        <div className="h-10 bg-gray-700 rounded mb-4"></div>
+        <div className="h-10 bg-gray-700 rounded"></div>
+      </div>
+    </div>
+  );
+}
+
+// Main export that wraps the content in Suspense
+export function LoginForm() {
+  return (
+    <Suspense fallback={<LoginFormFallback />}>
+      <LoginFormContent />
+    </Suspense>
   );
 } 
