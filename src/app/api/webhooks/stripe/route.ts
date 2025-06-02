@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { constructWebhookEvent } from '@/lib/stripe/client';
 import { handleStripeWebhook } from '@/lib/stripe/webhooks';
 
-// This needs to be exported to disable body parsing, as we need the raw body for webhook signature verification
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// This config disables body parsing, as we need the raw body for webhook signature verification
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+// Disable body parser for this route
+export const bodyParser = false;
 
 export async function POST(request: NextRequest) {
   try {
