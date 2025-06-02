@@ -72,7 +72,7 @@ function SettingsContent() {
   // Fetch subscription data
   useEffect(() => {
     async function fetchSubscriptionData() {
-      if (!user) return;
+      if (!user || !isClient) return;
       
       try {
         console.log('Settings: Fetching subscription data');
@@ -95,8 +95,12 @@ function SettingsContent() {
       }
     }
     
+    // Only fetch once on mount, not on every re-render where user might be the same
+    // but treated as a new reference
+    const controller = new AbortController();
     fetchSubscriptionData();
-  }, [user]);
+    return () => controller.abort();
+  }, [isClient]); // Only depend on isClient, not user which can cause re-renders
 
   // Determine Spotify connection status from userProfile or database
   const determineSpotifyStatus = useCallback(async () => {
