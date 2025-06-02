@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { constructWebhookEvent } from '@/lib/stripe/client';
 import { handleStripeWebhook } from '@/lib/stripe/webhooks';
 
-// This config disables body parsing, as we need the raw body for webhook signature verification
+// Required config for webhook routes
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-// Disable body parser for this route
-export const bodyParser = false;
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No signature found' }, { status: 400 });
     }
 
-    // Get the raw request body as text
+    // In App Router, we can directly get the raw body without bodyParser config
     const body = await request.text();
 
     // Verify the event
