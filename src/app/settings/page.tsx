@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, Suspense } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
@@ -10,34 +10,7 @@ import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import Button from '@/components/ui/Button';
 
-// Loading component for Suspense
-function SettingsLoading() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[#121212]"></div>
-        <div className="absolute top-0 -left-40 w-96 h-96 bg-gradient-to-br from-purple-500/20 via-[#1DB954]/20 to-transparent rounded-full filter blur-3xl opacity-50 animate-blob"></div>
-        <div className="absolute top-0 -right-40 w-96 h-96 bg-gradient-to-br from-[#1DB954]/20 via-purple-500/20 to-transparent rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
-      </div>
-      
-      <motion.div 
-        className="flex flex-col items-center space-y-4"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <svg className="animate-spin h-12 w-12 text-[#1DB954]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <p className="text-[#A3A3A3] text-lg">Loading settings...</p>
-      </motion.div>
-    </div>
-  );
-}
-
-// Main content component that uses useSearchParams
-function SettingsContent() {
+export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, userProfile, session, isLoading, refreshSession } = useSupabase();
@@ -287,16 +260,141 @@ function SettingsContent() {
 
   return (
     <div className="min-h-screen bg-[#121212] pt-20 pb-16">
-      {/* Content of your settings page */}
+      <div className="container max-w-4xl mx-auto px-4">
+        <h1 className="text-3xl font-bold mb-8">Settings</h1>
+        
+        <div className="space-y-8">
+          {/* Account Section */}
+          <div className="bg-[#181818] rounded-2xl p-6">
+            <h2 className="text-xl font-semibold mb-4">Account</h2>
+            
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-[#252525] pb-4 gap-2">
+                <div>
+                  <h3 className="font-medium">Email</h3>
+                  <p className="text-[#A3A3A3]">{user?.email}</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-[#252525] pb-4 gap-2">
+                <div>
+                  <h3 className="font-medium">Member Since</h3>
+                  <p className="text-[#A3A3A3]">
+                    {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-2 gap-2">
+                <div>
+                  <h3 className="font-medium">Subscription</h3>
+                  <p className="text-[#A3A3A3]">
+                    {subscriptionData?.isPro ? 'Pro Plan' : 'Free Plan'}
+                  </p>
+                </div>
+                <div>
+                  {!subscriptionData?.isPro && (
+                    <Link href="/pricing">
+                      <Button>
+                        Upgrade to Pro
+                      </Button>
+                    </Link>
+                  )}
+                  {subscriptionData?.isPro && (
+                    <Link href="/settings/subscription">
+                      <Button variant="secondary">
+                        Manage Subscription
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Spotify Connection Section */}
+          <div className="bg-[#181818] rounded-2xl p-6">
+            <h2 className="text-xl font-semibold mb-4">Spotify Connection</h2>
+            
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="font-medium">Status</h3>
+                <p className="text-[#A3A3A3] flex items-center mt-1">
+                  {statusLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Checking...
+                    </>
+                  ) : spotifyStatus ? (
+                    <>
+                      <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                      Connected
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-2"></span>
+                      Disconnected
+                    </>
+                  )}
+                </p>
+              </div>
+              
+              <div>
+                {spotifyStatus ? (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={disconnectSpotify}
+                    disabled={isDisconnecting}
+                  >
+                    {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={connectSpotify}
+                    disabled={isConnecting}
+                  >
+                    {isConnecting ? 'Connecting...' : 'Connect Spotify'}
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            <p className="text-sm text-[#A3A3A3] mt-4">
+              Connecting your Spotify account allows Diggr to create playlists for you.
+            </p>
+          </div>
+          
+          {/* Danger Zone */}
+          <div className="bg-red-900/20 border border-red-900/40 rounded-2xl p-6">
+            <h2 className="text-xl font-semibold mb-4 text-red-400">Danger Zone</h2>
+            
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="font-medium text-red-300">Delete Account</h3>
+                <p className="text-[#A3A3A3] text-sm">
+                  Permanently delete your account and all data.
+                </p>
+              </div>
+              
+              <div>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => toast.error("Account deletion is not implemented yet.")}
+                >
+                  Delete Account
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  );
-}
-
-// Main export that wraps in Suspense
-export default function SettingsPage() {
-  return (
-    <Suspense fallback={<SettingsLoading />}>
-      <SettingsContent />
-    </Suspense>
   );
 } 
