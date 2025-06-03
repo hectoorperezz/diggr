@@ -20,10 +20,11 @@ export const metadata = {
   creator: 'Diggr',
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon.ico', sizes: '32x32' }
+      { url: '/favicons/favicon.ico', sizes: 'any' },
+      { url: '/favicons/favicon-32x32.ico', sizes: '32x32' },
+      { url: '/favicons/favicon-16x16.ico', sizes: '16x16' }
     ],
-    shortcut: '/favicon.ico',
+    shortcut: '/favicons/favicon.ico',
     apple: '/images/diggr.png',
   },
   openGraph: {
@@ -52,13 +53,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="icon" href="/favicon-16x16.ico" sizes="16x16" />
-        <link rel="icon" href="/favicon-32x32.ico" sizes="32x32" />
-        <link rel="icon" type="image/png" href="/favicon.png" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" href="/favicons/favicon.ico" />
+        <link rel="icon" href="/favicons/favicon-16x16.ico" sizes="16x16" />
+        <link rel="icon" href="/favicons/favicon-32x32.ico" sizes="32x32" />
+        <link rel="icon" type="image/png" href="/favicons/favicon.png" />
+        <link rel="shortcut icon" href="/favicons/favicon.ico" />
         <link rel="apple-touch-icon" href="/images/diggr.png" />
-        <meta name="msapplication-TileImage" content="/favicon.ico" />
+        <meta name="msapplication-TileImage" content="/favicons/favicon.ico" />
         
         {/* Force refresh script for subscription status */}
         <Script id="force-refresh-script">
