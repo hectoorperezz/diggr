@@ -572,4 +572,49 @@ These improvements create a more intuitive and efficient user interface that cle
 19. Adding explicit link tags in the head section can help ensure browser recognition of favicons and logos.
 20. In PostgreSQL, function overloading (multiple functions with the same name but different parameter signatures) can cause ambiguity errors. Always use unique function names or explicitly specify parameter types when calling functions, and include DROP FUNCTION IF EXISTS statements in your migrations to avoid conflicts.
 21. When handling UI state for connectivity or status features, ensure button enablement logic properly reflects the current state to prevent users from attempting actions that aren't applicable to their current state.
-22. For status verification operations, prioritize using cached or already-available data (like userProfile) before making database queries to improve performance and reduce server load. 
+22. For status verification operations, prioritize using cached or already-available data (like userProfile) before making database queries to improve performance and reduce server load.
+
+## Code Cleanup Execution (Executor Mode)
+
+I'm now executing the code cleanup tasks in order of priority as outlined in the plan. I'll track progress here and update as tasks are completed.
+
+### Task 1: Create dedicated scripts directory
+
+**Current Status:** In Progress
+
+**Steps:**
+1. Create a new `/scripts` directory in the project root
+2. Review each utility script in the root directory
+3. Move relevant scripts to the new directory
+4. Delete obsolete scripts
+5. Document each script's purpose
+
+**Action Plan for Scripts:**
+- [ ] Create `/scripts` directory
+- [ ] Review and categorize all .js files in root directory
+- [ ] Move development utility scripts to the scripts directory
+- [ ] Delete obsolete scripts after confirmation
+- [ ] Add a README.md in the scripts directory explaining the purpose of each script
+
+### Task 2: Fix favicon duplication
+
+**Current Status:** Pending (will start after Task 1)
+
+**Action Plan:**
+- [ ] Audit all favicon files across the project
+- [ ] Determine which favicon files are actually being used
+- [ ] Establish proper favicon structure following Next.js best practices
+- [ ] Update head components to use the correct favicon references
+- [ ] Remove duplicate favicon files
+
+### Task 3: Improve documentation
+
+**Current Status:** Pending (will start after Task 2) 
+
+**Action Plan:**
+- [ ] Update or create a main README.md with setup instructions
+- [ ] Add documentation for the key architectural decisions
+- [ ] Document the development workflow
+
+## Executor's Feedback or Assistance Requests
+Starting the execution of the code cleanup tasks as planned. I'll begin with organizing the utility scripts by creating a dedicated scripts directory and moving relevant files. 
