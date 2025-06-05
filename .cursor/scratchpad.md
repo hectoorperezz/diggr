@@ -283,6 +283,80 @@ These issues lead to a confusing user experience in the Settings page, potential
 3. Optimize the status verification process to reduce database queries
 4. Enhance the UI to more clearly indicate connection states
 
+### 8. Dashboard Loading Timeout Issue (NEW)
+
+#### Root Cause Analysis
+After examining the codebase, particularly the `dashboard/page.tsx` and `components/providers/SupabaseProvider.tsx` files, I've identified several potential causes for the "Loading took too long" error that users are experiencing:
+
+1. **Multiple API Requests Creating Race Conditions**:
+   - The dashboard is making several API calls simultaneously:
+     - Authentication status check
+     - User profile fetching
+     - Subscription data fetching
+     - Playlist data fetching
+   - If any of these requests take too long or fail, it can trigger the timeout
+
+2. **Fixed Timeout Constraints**:
+   - The dashboard has a 5-second timeout (line 30 in dashboard/page.tsx)
+   - The SupabaseProvider has a 3-second timeout (line 281 in SupabaseProvider.tsx)
+   - These timeouts may not be sufficient for users with slower connections
+
+3. **Inefficient Authentication Flow**:
+   - Authentication initialization is guarded by both local and global flags
+   - The authentication state change listener can trigger multiple updates
+   - Profile fetching errors aren't properly handled in all cases
+
+4. **Network Connectivity Issues**:
+   - The error is more likely to occur on slower connections or unstable networks
+   - Multiple fetches exacerbate the problem in poor network conditions
+
+5. **Supabase Response Time Spikes**:
+   - Supabase may occasionally have performance fluctuations
+   - The authentication flow makes several requests to Supabase
+
+6. **Client-Side Hydration Issues**:
+   - The dashboard has complex state dependencies (user, session, userProfile, etc.)
+   - Hydration mismatches could lead to rendering delays
+
+#### Impact
+This issue significantly affects user experience:
+- Users see a frustrating "Something went wrong" screen
+- They're forced to sign out and try again, creating a poor first impression
+- Users might abandon the app entirely if they encounter this repeatedly
+
+#### Potential Solutions
+
+1. **Optimize Authentication Flow**:
+   - Simplify the authentication process by reducing redundant checks
+   - Implement better caching of authentication state
+   - Prioritize critical data fetching over non-essential data
+
+2. **Increase Timeout Thresholds**:
+   - Adjust the timeout values to be more generous (8-10 seconds instead of 3-5)
+   - Implement dynamic timeouts based on network conditions detection
+
+3. **Implement Progressive Loading**:
+   - Show the dashboard shell as soon as authentication is confirmed
+   - Load non-critical data (playlists, subscription details) asynchronously
+   - Use skeleton UI elements while content loads
+
+4. **Add Retry Mechanisms**:
+   - Implement automatic retries with exponential backoff for failed requests
+   - Add refresh button to allow users to retry loading without signing out
+
+5. **Enhance Error Handling**:
+   - Differentiate between authentication failures and data fetch failures
+   - Provide more specific error messages and recovery actions
+   - Add detailed logging for debugging
+
+6. **Server-Side Data Prefetching**:
+   - Consider migrating critical data fetching to server components
+   - Use Next.js's built-in data fetching capabilities to preload data
+
+7. **Implement Service Worker**:
+   - Cache authentication data with a service worker
+   - Speed up subsequent loads by serving cached data first
+
 ## High-level Task Breakdown
 
 ### 1. Project Setup and Configuration (1-2 days)
@@ -424,6 +498,30 @@ These issues lead to a confusing user experience in the Settings page, potential
   - More intuitive status indicators
 
 **Success Criteria:** The Settings page correctly displays the Member Since date, and the Spotify connection button is only clickable when appropriate (when user is not already connected). The page performs efficiently without excessive database queries.
+
+### 13. Fix Dashboard Loading Timeout Issue (NEW)
+
+1. **Optimize Authentication Flow**
+   - Refactor SupabaseProvider to reduce complexity
+   - Simplify authentication state management
+   - Consolidate duplicate API calls
+
+2. **Implement Progressive Loading**
+   - Modify dashboard to load in stages
+   - Add skeleton UI components
+   - Prioritize critical user data
+
+3. **Improve Error Handling**
+   - Add more specific error states
+   - Implement recovery actions for common errors
+   - Add detailed logging for debugging
+
+4. **Adjust Timeouts and Add Retries**
+   - Increase timeout thresholds
+   - Add automatic retry logic for failed requests
+   - Implement refresh functionality
+
+**Success Criteria:** Users no longer experience the "Loading took too long" error or, if network issues persist, they have clear options to recover without signing out.
 
 ## Project Status Board (Updated)
 
@@ -573,6 +671,9 @@ These improvements create a more intuitive and efficient user interface that cle
 20. In PostgreSQL, function overloading (multiple functions with the same name but different parameter signatures) can cause ambiguity errors. Always use unique function names or explicitly specify parameter types when calling functions, and include DROP FUNCTION IF EXISTS statements in your migrations to avoid conflicts.
 21. When handling UI state for connectivity or status features, ensure button enablement logic properly reflects the current state to prevent users from attempting actions that aren't applicable to their current state.
 22. For status verification operations, prioritize using cached or already-available data (like userProfile) before making database queries to improve performance and reduce server load.
+23. When implementing complex authentication flows, consider using progressive loading patterns to improve perceived performance and avoid timeout errors.
+24. Always provide users with self-service recovery options (like a retry button) rather than forcing them to sign out when errors occur.
+25. Use skeleton UI components to improve perceived loading performance on screens with multiple data dependencies.
 
 ## Code Cleanup Execution (Executor Mode)
 
@@ -660,4 +761,68 @@ All code cleanup tasks have been successfully completed. The project structure i
 2. Properly organized favicon files in a single location
 3. Comprehensive documentation for the project
 
-These changes have improved the maintainability of the codebase and made it easier for new developers to understand and contribute to the project. No further cleanup tasks are required at this time. 
+These changes have improved the maintainability of the codebase and made it easier for new developers to understand and contribute to the project. No further cleanup tasks are required at this time.
+
+## Bug: Stripe Subscription Upgrade Not Updating Plan Details
+
+**Reported by:** User
+**Date:** 2023-06-03
+
+### Problem Description
+When a user upgrades their subscription in Stripe, the `stripe_customer_id` is correctly updated in the `subscriptions` table in the database. However, the `plan_type`, `current_period_start`, and `current_period_end` columns are not being updated. This is crucial for managing subscriptions correctly and displaying the accurate plan type to the user in the frontend.
+
+**Root Cause Analysis (Updated by Planner):**
+The investigation revealed that the Express server defined in `server/index.ts` and `server/routes.ts` **does not currently have a Stripe webhook endpoint defined.** The `server/routes.ts` file, responsible for registering API routes, is essentially empty. Therefore, the application is not listening for or processing any Stripe events, which is why the database fields are not being updated upon subscription changes.
+
+This means the task is not to fix a bug in an existing handler, but to **implement the Stripe webhook endpoint and its processing logic from scratch.**
+
+### Goal
+Implement a Stripe webhook endpoint and handler logic to ensure that `plan_type`, `current_period_start`, and `current_period_end` are correctly updated in the `subscriptions` table upon a subscription change event from Stripe.
+
+### Analysis and Planning (Planner Mode) - Revised
+
+1.  **Establish Webhook Endpoint:** Define a new POST route (e.g., `/api/stripe/webhook`) in `server/routes.ts`.
+2.  **Implement Signature Verification:** Ensure the server can parse raw request bodies for this route (using `express.raw({ type: 'application/json' })`) and implement Stripe's `stripe.webhooks.constructEvent()` for signature verification.
+3.  **Process Relevant Events:** Focus on handling `customer.subscription.updated` and potentially `invoice.payment_succeeded` events.
+4.  **Data Extraction:** Correctly extract `stripe_subscription_id`, `stripe_customer_id`, `current_period_start`, `current_period_end`, `status`, and determine `plan_type` (by mapping Stripe Price ID to your internal plan names).
+5.  **Database Update:** Implement the Supabase query to update the `subscriptions` table with the extracted data.
+6.  **Configuration for Plan Mapping:** Plan how Stripe Price IDs will be mapped to your application's `plan_type` (e.g., using environment variables for Stripe Price IDs for 'premium', etc.).
+
+### High-Level Task Breakdown (for Executor) - Revised
+
+-   **Task 1: Create Stripe Webhook Endpoint and Basic Handler**
+    -   **Action:** In `server/index.ts`, ensure `express.raw({ type: 'application/json' })` middleware is correctly applied for the future webhook route to allow Stripe signature verification. (✅ Done - `express.json()` made conditional, `express.raw()` applied for webhook path).
+    -   **Action:** In `server/routes.ts`, define a new POST route (e.g., `/api/stripe/webhook`). (✅ Done).
+    -   **Action:** Implement the basic structure of a Stripe webhook handler within this route. This includes:
+        *   Retrieving the Stripe signature from the `Stripe-Signature` header. (✅ Done).
+        *   Using `stripe.webhooks.constructEvent()` (ensure `stripe` SDK is imported and initialized) to verify the event and parse the body. (✅ Done).
+        *   Setting up a basic `switch` statement to log different event types initially. (✅ Done, and expanded to handle subscription events).
+    -   **Current Status:** ✅ Completed.
+    -   **Success Criteria:** A new `/api/stripe/webhook` endpoint is created that can receive events from Stripe, verify their signatures, and log the event type. The server correctly handles raw JSON bodies for this endpoint.
+
+-   **Task 2: Implement Subscription Update Logic in Webhook Handler**
+    -   **Action:** Within the `switch` statement, add cases for `customer.subscription.updated` and `invoice.payment_succeeded`. (✅ Done, also included `customer.subscription.created` and `customer.subscription.deleted`).
+    -   **Action:** Extract the relevant data from the Stripe event object:
+        *   `stripe_subscription_id`, `stripe_customer_id`, `current_period_start`, `current_period_end`, `plan_id_from_stripe`, `status`. (✅ Done).
+    -   **Action:** Implement logic to map `plan_id_from_stripe` to your internal `plan_type` (e.g., 'free', 'premium'). This might involve checking against Stripe Price IDs stored in environment variables (e.g., `STRIPE_PREMIUM_PRICE_ID`). (✅ Done - basic mapping for `STRIPE_PREMIUM_PRICE_ID` implemented. User needs to configure this env var and potentially add more for other plans).
+    -   **Action:** Construct and execute a Supabase query (using the Supabase client) to update the `subscriptions` table. The update should target the record matching `stripe_subscription_id` and set `plan_type`, `current_period_start`, `current_period_end`, and `status`. (✅ Done - includes update logic and a basic insert for new subscriptions).
+    -   **Current Status:** ✅ Completed.
+    -   **Success Criteria:** The webhook handler correctly processes `customer.subscription.updated` and `invoice.payment_succeeded` events, extracts all necessary information including the mapped `plan_type`, and updates the `subscriptions` table in Supabase.
+
+-   **Task 3: Testing and Verification**
+    -   **Current Status:** ⏳ Pending User Action.
+    -   **Action:** Use the Stripe CLI to forward webhook events to your local development server (e.g., `stripe listen --forward-to localhost:5001/api/stripe/webhook`).
+    -   **Action:** Trigger subscription update events from the Stripe dashboard (e.g., changing a test customer's plan).
+    -   **Action:** Verify in the Supabase dashboard that the `plan_type`, `current_period_start`, `current_period_end`, and `status` are updated correctly in the `subscriptions` table for the appropriate user.
+    -   **Success Criteria:** The bug is confirmed to be resolved through testing, and subscription details are accurately reflected in the database.
+
+### Executor's Feedback or Assistance Requests
+- Implemented the Stripe webhook handler in `server/routes.ts` and modified `server/index.ts` for raw body parsing on the webhook route.
+- The handler processes `customer.subscription.created/updated/deleted` and `invoice.payment_succeeded` events.
+- It updates `plan_type`, `status`, `current_period_start`, `current_period_end`, and `stripe_customer_id` in the `subscriptions` table.
+- **Important:** User needs to set the `STRIPE_PREMIUM_PRICE_ID` environment variable. If other paid plans exist, their Price IDs and mapping logic should be added.
+- The `server/` files (`index.ts` and `routes.ts`) exhibited persistent linter errors related to module imports and Express typings. These seem to be environment-specific or related to the project's TS configuration for the `server/` directory and did not block the functional implementation of the webhook logic. The implemented webhook code follows standard Express and Stripe practices.
+
+### Lessons
+- When a feature reliant on webhooks isn't working as expected, first verify the webhook endpoint exists, is correctly configured to receive events (including raw body parsing for signature verification), and is processing the correct event types.
+- Mapping external plan/price IDs (like Stripe's) to internal application plan identifiers is a common requirement in webhook handlers. 

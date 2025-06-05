@@ -26,9 +26,39 @@ function SearchParamsHandler({ onParamsChange }: { onParamsChange: (success: str
   return null; // This component doesn't render anything
 }
 
+// Simple component to display the member date in settings page
+function SettingsMemberDate() {
+  const [memberDate, setMemberDate] = useState('Loading...');
+  
+  useEffect(() => {
+    // Simple one-time fetch of the profile data to get the date
+    fetch('/api/user/profile', {
+      cache: 'no-store', 
+      headers: { 
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache' 
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.profile?.created_at_display) {
+        setMemberDate(data.profile.created_at_display);
+      } else {
+        setMemberDate('N/A');
+      }
+    })
+    .catch(err => {
+      console.error('Error fetching member date:', err);
+      setMemberDate('N/A');
+    });
+  }, []);
+  
+  return memberDate;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, userProfile, session, isLoading, refreshSession } = useSupabase();
+  const { user, userProfile, session, isLoading, refreshSession, signOut } = useSupabase();
   const [isClient, setIsClient] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -75,7 +105,10 @@ export default function SettingsPage() {
       isSubscriptionFetching = true;
       
       try {
-        console.log('Settings: Fetching subscription data');
+        console.log('Settings: Fetching subscription data for user:', user.id);
+        // Force refresh the session to ensure we have the latest data
+        await supabase.auth.refreshSession();
+        
         const timestamp = new Date().getTime();
         const response = await fetch(`/api/user/subscription?t=${timestamp}`, {
           headers: {
@@ -88,7 +121,17 @@ export default function SettingsPage() {
         if (response.ok && isMounted) {
           const data = await response.json();
           console.log('Settings: Subscription data received:', data);
+          
+          // Add more detailed logging
+          if (data.isPremium) {
+            console.log('Settings: User has premium subscription with plan:', data.subscription?.plan);
+          } else {
+            console.log('Settings: User is on free plan');
+          }
+          
           setSubscriptionData(data);
+        } else {
+          console.error('Settings: Subscription data fetch failed with status:', response.status);
         }
       } catch (error) {
         console.error('Error fetching subscription data in settings:', error);
@@ -102,7 +145,7 @@ export default function SettingsPage() {
     return () => {
       isMounted = false;
     };
-  }, [user?.id]); // Use user.id instead of user to avoid unnecessary fetches
+  }, [user?.id, supabase.auth]);
 
   // Determine Spotify connection status from userProfile or database
   const determineSpotifyStatus = useCallback(async () => {
@@ -397,80 +440,7 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-[#A3A3A3] mb-2">Member Since</label>
                     <div className="bg-black/30 backdrop-blur-md rounded-xl px-4 py-3 border border-white/10">
                       <div className="flex justify-between items-center">
-                        <p className="text-white">
-                          {(() => {
-                            // Try different sources of created_at in order of preference
-                            let dateString: string | null = null;
-                            
-                            // First check userProfile.created_at
-                            if (userProfile?.created_at) {
-                              dateString = userProfile.created_at;
-                              console.log('Using userProfile.created_at:', dateString);
-                            }
-                            // Then fall back to user.created_at from auth
-                            else if (user?.created_at) {
-                              dateString = user.created_at;
-                              console.log('Using user.created_at:', dateString);
-                            }
-                            // Then check user.metadata (sometimes created_at is stored there)
-                            else if (user?.app_metadata?.created_at) {
-                              dateString = user.app_metadata.created_at as string;
-                              console.log('Using user.app_metadata.created_at:', dateString);
-                            }
-                            // Last resort: use user.last_sign_in_at
-                            else if (user?.last_sign_in_at) {
-                              dateString = user.last_sign_in_at;
-                              console.log('Using user.last_sign_in_at as fallback:', dateString);
-                            }
-                            
-                            // If we have a date string, try to format it
-                            if (dateString) {
-                              try {
-                                const date = new Date(dateString);
-                                // Check if date is valid before formatting
-                                if (!isNaN(date.getTime())) {
-                                  return date.toLocaleDateString(undefined, {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                  });
-                                }
-                              } catch (e) {
-                                console.error('Error formatting date:', e);
-                              }
-                            }
-                            
-                            // Default fallback
-                            return 'N/A';
-                          })()}
-                        </p>
-                        
-                        {/* Fix Date button - only show if date is N/A or if admin/dev mode */}
-                        {(process.env.NODE_ENV === 'development' || !userProfile?.created_at) && (
-                          <Button 
-                            onClick={async () => {
-                              try {
-                                toast.loading('Fixing date...');
-                                const response = await fetch('/api/user/fix-created-at');
-                                const result = await response.json();
-                                
-                                if (result.success) {
-                                  toast.success('Date fixed! Refreshing...');
-                                  refreshSession();
-                                } else {
-                                  toast.error(result.error || 'Failed to fix date');
-                                }
-                              } catch (error) {
-                                console.error('Error fixing date:', error);
-                                toast.error('Error fixing date');
-                              }
-                            }}
-                            variant="primary"
-                            size="sm"
-                          >
-                            Fix Date
-                          </Button>
-                        )}
+                        <p className="text-white"><SettingsMemberDate /></p>
                       </div>
                     </div>
                   </div>
@@ -510,9 +480,13 @@ export default function SettingsPage() {
                         : 'Limited to 5 playlists per month with ads.'}
                     </p>
                     
+                    {/* Current subscription period info */}
                     {subscriptionData?.isPremium && subscriptionData?.subscription?.currentPeriodEnd && (
                       <p className="text-sm text-[#A3A3A3] mt-2">
-                        Your subscription renews on {new Date(subscriptionData.subscription.currentPeriodEnd).toLocaleDateString()}.
+                        {subscriptionData?.subscription?.cancelAtPeriodEnd 
+                          ? `Your subscription is canceled but remains active until ${new Date(subscriptionData.subscription.currentPeriodEnd).toLocaleDateString()}.`
+                          : `Your subscription renews on ${new Date(subscriptionData.subscription.currentPeriodEnd).toLocaleDateString()}.`
+                        }
                       </p>
                     )}
                   </div>
@@ -522,25 +496,47 @@ export default function SettingsPage() {
                       <Button 
                         onClick={async () => {
                           try {
-                            const response = await fetch('/api/subscriptions/portal', {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                              },
-                              body: JSON.stringify({
-                                returnUrl: `${window.location.origin}/settings`,
-                              }),
+                            console.log("Manage Subscription button clicked");
+                            
+                            // Create a loading toast
+                            toast.loading('Opening subscription management...', {
+                              duration: 10000, // Long duration
+                              id: 'portal-loading'
                             });
+                
+                            // Create a form and submit it directly to the portal URL
+                            // This is a more reliable way to open a new window/tab
+                            const form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = '/api/subscriptions/portal-direct'; // New endpoint
+                            form.target = '_blank'; // Open in new tab
                             
-                            const data = await response.json();
+                            // Add hidden input for returnUrl
+                            const returnUrlInput = document.createElement('input');
+                            returnUrlInput.type = 'hidden';
+                            returnUrlInput.name = 'returnUrl';
+                            returnUrlInput.value = window.location.origin + '/settings';
+                            form.appendChild(returnUrlInput);
                             
-                            if (data.url) {
-                              window.location.href = data.url;
-                            } else {
-                              throw new Error('No portal URL returned');
-                            }
+                            // Add CSRF protection
+                            const csrfInput = document.createElement('input');
+                            csrfInput.type = 'hidden';
+                            csrfInput.name = 'csrfToken';
+                            csrfInput.value = Math.random().toString(36).substring(2);
+                            form.appendChild(csrfInput);
+                            
+                            // Add the form to the body and submit it
+                            document.body.appendChild(form);
+                            form.submit();
+                            
+                            // Remove the form
+                            document.body.removeChild(form);
+                            
+                            // Clear the loading toast
+                            setTimeout(() => toast.dismiss('portal-loading'), 2000);
                           } catch (error) {
-                            console.error('Error opening subscription portal:', error);
+                            console.error('Error in portal redirect:', error);
+                            toast.dismiss('portal-loading');
                             toast.error('Failed to open subscription management');
                           }
                         }}
@@ -695,18 +691,33 @@ export default function SettingsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Button 
-                href="/dashboard" 
-                variant="outline"
-                size="lg"
-                icon={
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 12L5 10M5 10L12 3L19 10M5 10V20C5 20.5523 5.44772 21 6 21H9M19 10L21 12M19 10V20C19 20.5523 18.5523 21 18 21H15M9 21C9.55228 21 10 20.5523 10 20V16C10 15.4477 10.4477 15 11 15H13C13.5523 15 14 15.4477 14 16V20C14 20.5523 14.4477 21 15 21M9 21H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                }
-              >
-                Back to Dashboard
-              </Button>
+              <div className="flex space-x-4">
+                <Button 
+                  href="/dashboard" 
+                  variant="outline"
+                  size="lg"
+                  icon={
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 12L5 10M5 10L12 3L19 10M5 10V20C5 20.5523 5.44772 21 6 21H9M19 10L21 12M19 10V20C19 20.5523 18.5523 21 18 21H15M9 21C9.55228 21 10 20.5523 10 20V16C10 15.4477 10.4477 15 11 15H13C13.5523 15 14 15.4477 14 16V20C14 20.5523 14.4477 21 15 21M9 21H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  }
+                >
+                  Back to Dashboard
+                </Button>
+                
+                <Button 
+                  onClick={signOut}
+                  variant="danger"
+                  size="lg"
+                  icon={
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M17 16L21 12M21 12L17 8M21 12H9M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  }
+                >
+                  Log Out
+                </Button>
+              </div>
             </motion.div>
           </div>
         </main>

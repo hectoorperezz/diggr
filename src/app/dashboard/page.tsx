@@ -11,12 +11,13 @@ import SubscriptionStatus from '@/components/ui/SubscriptionStatus';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, userProfile, session, isLoading, signOut } = useSupabase();
+  const { user, userProfile, session, isLoading, signOut, refreshSession } = useSupabase();
   const [isClient, setIsClient] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [localLoading, setLocalLoading] = useState(true);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Set isClient to true when component mounts on client
   useEffect(() => {
@@ -31,7 +32,7 @@ export default function DashboardPage() {
           setError('Loading took too long. Please try refreshing the page.');
         }
       }
-    }, 5000); // 5 second timeout
+    }, 10000); // Increased from 5s to 10s timeout
     
     return () => clearTimeout(timeoutId);
   }, []);
@@ -124,6 +125,29 @@ export default function DashboardPage() {
     fetchSubscriptionData();
   }, [user]);
 
+  // Handle retry loading
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    setError(null);
+    setLocalLoading(true);
+    setHasCheckedAuth(false);
+    
+    try {
+      // Force refresh session
+      console.log('Manually refreshing session...');
+      await refreshSession();
+      
+      // Wait a moment to ensure all data is refreshed
+      setTimeout(() => {
+        setIsRetrying(false);
+      }, 1000);
+    } catch (err) {
+      console.error('Error during retry:', err);
+      setError('Failed to refresh session. Please try signing out and back in.');
+      setIsRetrying(false);
+    }
+  };
+
   // Show loading state
   if ((isLoading || localLoading) && !hasCheckedAuth) {
     return (
@@ -169,16 +193,47 @@ export default function DashboardPage() {
           <div className="text-red-500 text-5xl mb-4 text-center">😞</div>
           <h1 className="text-2xl font-bold mb-4 text-center">Something went wrong</h1>
           <p className="mb-6 text-[#A3A3A3] text-center">{error}</p>
-          <div className="flex justify-center">
+          <div className="flex flex-col md:flex-row justify-center gap-4">
+            <motion.button 
+              onClick={handleRetry}
+              className="relative overflow-hidden group rounded-full"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              disabled={isRetrying}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:scale-105 transition-transform duration-300"></div>
+              <span className="relative bg-black/30 backdrop-blur-sm m-[2px] px-8 py-3 rounded-full inline-block font-medium text-white flex items-center justify-center">
+                {isRetrying ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Retrying...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh and Try Again
+                  </>
+                )}
+              </span>
+            </motion.button>
             <motion.button 
               onClick={handleSignOut}
               className="relative overflow-hidden group rounded-full"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              disabled={isRetrying}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954] to-purple-500 group-hover:scale-105 transition-transform duration-300"></div>
-              <span className="relative bg-black/30 backdrop-blur-sm m-[2px] px-8 py-3 rounded-full inline-block font-medium text-white">
-                Sign Out and Try Again
+              <span className="relative bg-black/30 backdrop-blur-sm m-[2px] px-8 py-3 rounded-full inline-block font-medium text-white flex items-center justify-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Sign Out
               </span>
             </motion.button>
           </div>
@@ -256,11 +311,16 @@ export default function DashboardPage() {
           >
             <SubscriptionStatus />
             <Button 
-              href="/settings" 
-              variant="outline"
+              href="/create-playlist" 
+              variant="primary"
               size="md"
+              icon={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              }
             >
-              Settings
+              Create Playlist
             </Button>
           </motion.div>
         </div>
@@ -372,9 +432,7 @@ export default function DashboardPage() {
                   <h3 className="text-lg font-semibold">Member Since</h3>
                 </div>
                 <p className="text-3xl font-bold text-blue-400 mb-1">
-                  {user?.created_at 
-                    ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) 
-                    : 'New Member'}
+                  <MemberDateDisplay />
                 </p>
                 <p className="text-sm text-[#A3A3A3]">Diggr account</p>
               </div>
@@ -688,4 +746,31 @@ function RecentPlaylists() {
       ))}
     </div>
   );
+}
+
+// Simple component to display the member date that only fetches once
+function MemberDateDisplay() {
+  const [memberDate, setMemberDate] = useState('Loading...');
+  
+  useEffect(() => {
+    // Simple one-time fetch of the profile data to get the date
+    fetch('/api/user/profile', {
+      cache: 'no-store', 
+      headers: { 'Cache-Control': 'no-cache' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.profile?.created_at_display) {
+        setMemberDate(data.profile.created_at_display);
+      } else {
+        setMemberDate('New Member');
+      }
+    })
+    .catch(err => {
+      console.error('Error fetching member date:', err);
+      setMemberDate('New Member');
+    });
+  }, []);
+  
+  return memberDate;
 } 

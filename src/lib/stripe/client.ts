@@ -44,28 +44,56 @@ export async function createCustomer(email: string, userId: string) {
 
 // Get or create a Stripe customer for the user
 export async function getOrCreateCustomer(userId: string, email: string) {
+  console.log(`[STRIPE] Getting or creating customer for user: ${userId}, email: ${email}`);
+  
   // First, try to get the customer ID from the database
-  const { data: subscription } = await supabaseAdmin
+  const { data: subscription, error: subscriptionError } = await supabaseAdmin
     .from('subscriptions')
     .select('stripe_customer_id')
     .eq('user_id', userId)
     .single();
+  
+  if (subscriptionError) {
+    console.error(`[STRIPE] Error fetching subscription for user ${userId}:`, subscriptionError);
+  } else {
+    console.log(`[STRIPE] Found subscription:`, subscription);
+  }
 
   // If we have a customer ID, fetch the customer from Stripe
   if (subscription?.stripe_customer_id) {
     try {
+      console.log(`[STRIPE] Retrieving existing customer: ${subscription.stripe_customer_id}`);
       const customer = await stripe.customers.retrieve(subscription.stripe_customer_id);
+      
       if (!customer.deleted) {
+        console.log(`[STRIPE] Successfully retrieved customer:`, customer.id);
         return customer;
+      } else {
+        console.log(`[STRIPE] Customer found but marked as deleted, will create new`);
       }
-    } catch (error) {
-      console.error('Error retrieving Stripe customer:', error);
+    } catch (error: any) {
+      // Log the specific Stripe error
+      if (error.type === 'StripeInvalidRequestError') {
+        console.error(`[STRIPE] Invalid customer ID: ${subscription.stripe_customer_id}`, error.message);
+      } else {
+        console.error(`[STRIPE] Error retrieving customer:`, error);
+      }
       // Continue to create a new customer if there's an error
+      console.log(`[STRIPE] Will create new customer due to error`);
     }
+  } else {
+    console.log(`[STRIPE] No customer ID found in database, creating new customer`);
   }
 
   // If no customer exists or there was an error, create a new one
-  return createCustomer(email, userId);
+  try {
+    const newCustomer = await createCustomer(email, userId);
+    console.log(`[STRIPE] Created new customer: ${newCustomer.id}`);
+    return newCustomer;
+  } catch (error) {
+    console.error(`[STRIPE] Failed to create customer:`, error);
+    throw error;
+  }
 }
 
 // Create a checkout session for a subscription
@@ -99,16 +127,68 @@ export async function createCheckoutSession(userId: string, email: string, price
 // Create a portal session for managing subscriptions
 export async function createPortalSession(userId: string, email: string, returnUrl: string) {
   try {
-    const customer = await getOrCreateCustomer(userId, email);
+    console.log('[STRIPE CLIENT] Creating portal session for user:', userId, 'email:', email);
+    
+    // Validate inputs
+    if (!userId || !email || !returnUrl) {
+      const missingParams: string[] = [];
+      if (!userId) missingParams.push('userId');
+      if (!email) missingParams.push('email');
+      if (!returnUrl) missingParams.push('returnUrl');
+      
+      const errorMsg = `Missing required parameters: ${missingParams.join(', ')}`;
+      console.error('[STRIPE CLIENT] ' + errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    // Get the customer
+    let customer;
+    try {
+      customer = await getOrCreateCustomer(userId, email);
+      console.log('[STRIPE CLIENT] Got customer:', customer.id);
+    } catch (customerError) {
+      console.error('[STRIPE CLIENT] Failed to get or create customer:', customerError);
+      throw new Error('Failed to retrieve customer information');
+    }
+    
+    if (!customer || !customer.id) {
+      console.error('[STRIPE CLIENT] Invalid customer object returned');
+      throw new Error('Invalid customer data');
+    }
 
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customer.id,
-      return_url: returnUrl,
-    });
-
-    return portalSession;
+    // Create the portal session
+    console.log('[STRIPE CLIENT] Creating billing portal session with return URL:', returnUrl);
+    try {
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: customer.id,
+        return_url: returnUrl,
+      });
+      
+      if (!portalSession || !portalSession.url) {
+        console.error('[STRIPE CLIENT] Portal session created but missing URL');
+        throw new Error('Portal session created but missing URL');
+      }
+      
+      console.log('[STRIPE CLIENT] Portal session created:', portalSession.id, 'URL:', portalSession.url);
+      return portalSession;
+    } catch (portalError: any) {
+      // Handle specific Stripe errors
+      if (portalError.type === 'StripeInvalidRequestError') {
+        console.error(`[STRIPE CLIENT] Invalid request to create portal:`, portalError.message);
+        
+        // Check for common issues
+        if (portalError.message.includes('No subscription found')) {
+          throw new Error('No active subscription found for this customer');
+        } else if (portalError.message.includes('does not exist')) {
+          throw new Error('Customer no longer exists in Stripe');
+        }
+      }
+      
+      console.error('[STRIPE CLIENT] Error creating portal session:', portalError);
+      throw portalError;
+    }
   } catch (error) {
-    console.error('Error creating portal session:', error);
+    console.error('[STRIPE CLIENT] Error in createPortalSession:', error);
     throw error;
   }
 }

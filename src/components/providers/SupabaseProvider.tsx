@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User, createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -43,7 +43,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   // Create supabase client
   const supabase = createClient();
 
-  // Fetch user profile data
+  // Fetch user profile data with enhanced debugging
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log('Fetching user profile for ID:', userId);
@@ -63,11 +63,34 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
       
+      console.log('Auth user details:', {
+        id: authUser.id,
+        email: authUser.email,
+        created_at: authUser.created_at
+      });
+      
       const created_at = authUser.created_at ? new Date(authUser.created_at).toISOString() : new Date().toISOString();
       console.log('Auth user created_at timestamp:', created_at, 'from raw value:', authUser.created_at);
       
+      // Try direct admin client approach first (more reliable)
+      let adminSupabase;
+      try {
+        adminSupabase = createSupabaseClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+          process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+        );
+      } catch (error) {
+        console.error('Error creating admin client:', error);
+        adminSupabase = null;
+      }
+
+      // Only use admin client if service key is available
+      const clientToUse = adminSupabase || supabase;
+      const usingAdmin = clientToUse !== supabase;
+      console.log(`Using ${usingAdmin ? 'ADMIN' : 'regular'} client to fetch user profile`);
+      
       // Query database for user profile
-      const { data, error } = await supabase
+      const { data, error } = await clientToUse
         .from('users')
         .select('*')
         .eq('id', userId)
@@ -81,14 +104,16 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           console.log('User record not found in database, creating one...');
           
           try {
-            // Try to create a user record with proper timestamp
-            const { data: userData, error: insertError } = await supabase
+            // Try to create a user record with proper timestamp - always attempt with admin first for reliability
+            const insertClient = process.env.SUPABASE_SERVICE_ROLE_KEY ? adminSupabase : supabase;
+            
+            const { data: userData, error: insertError } = await insertClient
               .from('users')
               .insert({
                 id: userId,
                 email: authUser.email || 'unknown@example.com',
                 spotify_connected: false,
-                created_at: created_at,
+                created_at: created_at, // Set the created_at date from auth user
                 updated_at: new Date().toISOString()
               })
               .select()
@@ -96,6 +121,49 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
             
             if (insertError) {
               console.error('Failed to create user record:', insertError);
+              
+              // As a fallback, try to call our API endpoint to fix the created_at date
+              try {
+                console.log('Attempting to fix created_at via API as fallback...');
+                const response = await fetch('/api/user/fix-created-at', {
+                  method: 'GET',
+                  headers: { 'Cache-Control': 'no-cache' }
+                });
+                
+                if (response.ok) {
+                  const result = await response.json();
+                  console.log('Fix created_at API response:', result);
+                  
+                  // If the API fixed it, try fetching the profile again
+                  if (result.success) {
+                    console.log('API fixed the date, fetching profile again...');
+                    const { data: refreshedData, error: refreshError } = await clientToUse
+                      .from('users')
+                      .select('*')
+                      .eq('id', userId)
+                      .single();
+                      
+                    if (!refreshError && refreshedData) {
+                      console.log('Successfully fetched profile after fixing date:', refreshedData);
+                      
+                      // Ensure we return a properly structured user profile
+                      return {
+                        id: refreshedData.id,
+                        email: refreshedData.email,
+                        spotify_connected: !!refreshedData.spotify_connected,
+                        created_at: refreshedData.created_at || created_at,
+                        updated_at: refreshedData.updated_at,
+                        spotify_refresh_token: refreshedData.spotify_refresh_token
+                      } as UserProfile;
+                    }
+                  }
+                } else {
+                  console.error('Failed to fix created_at via API:', await response.text());
+                }
+              } catch (apiError) {
+                console.error('Error calling fix-created-at API:', apiError);
+              }
+              
               return null;
             }
             
@@ -121,7 +189,38 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
       
-      console.log('Found existing user profile:', data);
+      console.log('Found existing user profile with created_at:', data.created_at);
+      
+      // If profile exists but created_at is null, try to fix it
+      if (!data.created_at) {
+        console.warn('User profile exists but has no created_at date, attempting to fix...');
+        
+        try {
+          // Update with auth user created_at
+          const { data: updatedData, error: updateError } = await clientToUse
+            .from('users')
+            .update({ 
+              created_at: created_at,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId)
+            .select()
+            .single();
+            
+          if (!updateError && updatedData) {
+            console.log('Fixed missing created_at in existing profile:', updatedData.created_at);
+            data.created_at = updatedData.created_at;
+          } else {
+            console.error('Failed to fix missing created_at:', updateError);
+            // Still use auth date as fallback
+            data.created_at = created_at;
+          }
+        } catch (updateError) {
+          console.error('Error updating missing created_at:', updateError);
+          // Use auth date as fallback
+          data.created_at = created_at;
+        }
+      }
       
       // Ensure we return a properly structured user profile with all required fields
       const profile = {
@@ -133,7 +232,13 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         spotify_refresh_token: data.spotify_refresh_token
       } as UserProfile;
       
-      console.log('Returning existing user profile with created_at:', profile.created_at);
+      console.log('Final user profile being returned:', {
+        id: profile.id,
+        email: profile.email,
+        created_at: profile.created_at,
+        spotify_connected: profile.spotify_connected
+      });
+      
       return profile;
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -175,7 +280,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         console.log('Forcing loading state to resolve after timeout');
         setIsLoading(false);
       }
-    }, 3000); // 3 second timeout
+    }, 8000); // Increased from 3s to 8s timeout
     
     return () => clearTimeout(timeoutId);
   }, [isLoading]);
@@ -190,29 +295,69 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     // Set global flag
     authInitializedGlobal = true;
     
-    // Get initial session
+    // Get initial session with retry mechanism
     const initializeAuth = async () => {
       setIsLoading(true);
       
       try {
         console.log('Initializing auth...');
-        const { data } = await supabase.auth.getSession();
+        
+        // First attempt
+        let data;
+        let tryCount = 0;
+        const maxTries = 3;
+        let lastError;
+        
+        while (tryCount < maxTries) {
+          try {
+            tryCount++;
+            console.log(`Auth initialization attempt ${tryCount}/${maxTries}`);
+            const result = await supabase.auth.getSession();
+            data = result.data;
+            
+            // If we get here, the request succeeded
+            break;
+          } catch (err) {
+            lastError = err;
+            console.error(`Auth init attempt ${tryCount} failed:`, err);
+            
+            // Only wait and retry if we haven't hit the max attempts
+            if (tryCount < maxTries) {
+              // Exponential backoff: 500ms, 1000ms, 2000ms
+              const backoffTime = Math.min(500 * Math.pow(2, tryCount - 1), 3000);
+              console.log(`Retrying in ${backoffTime}ms...`);
+              await new Promise(resolve => setTimeout(resolve, backoffTime));
+            }
+          }
+        }
+        
+        // If all attempts failed, throw the last error
+        if (!data && lastError) {
+          throw lastError;
+        }
         
         console.log('Initial session check:', { 
-          hasSession: !!data.session,
-          user: data.session?.user?.email || 'none'
+          hasSession: !!data?.session,
+          user: data?.session?.user?.email || 'none'
         });
         
-        setSession(data.session);
-        setUser(data.session?.user || null);
+        setSession(data?.session || null);
+        setUser(data?.session?.user || null);
         
-        if (data.session?.user) {
+        if (data?.session?.user) {
           try {
-            const profile = await fetchUserProfile(data.session.user.id);
-            setUserProfile(profile);
+            // Use a timeout to fetch profile to avoid race conditions
+            setTimeout(async () => {
+              try {
+                const profile = await fetchUserProfile(data.session.user.id);
+                setUserProfile(profile);
+              } catch (profileErr) {
+                console.error('Error in delayed profile fetch:', profileErr);
+              }
+            }, 500);
           } catch (err) {
-            console.error('Error fetching user profile during init:', err);
-            // Continue even if profile fetch fails
+            console.error('Error setting up profile fetch:', err);
+            // Continue even if profile fetch setup fails
           }
         }
       } catch (error) {
@@ -250,14 +395,17 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         setSession(currentSession);
         setUser(currentSession?.user || null);
         
+        // Delay profile fetching to prevent race conditions
         if (currentSession?.user) {
-          try {
-            const profile = await fetchUserProfile(currentSession.user.id);
-            setUserProfile(profile);
-          } catch (err) {
-            console.error('Error fetching profile in auth change:', err);
-            // Continue even if profile fetch fails
-          }
+          // Use a short delay to allow auth state to settle
+          setTimeout(async () => {
+            try {
+              const profile = await fetchUserProfile(currentSession.user.id);
+              setUserProfile(profile);
+            } catch (err) {
+              console.error('Error in delayed profile fetch during auth change:', err);
+            }
+          }, 500);
         } else {
           setUserProfile(null);
         }

@@ -4,11 +4,19 @@ import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const heroRef = useRef(null);
   const isHeroInView = useInView(heroRef, { once: false });
+  const { session, isLoading } = useSupabase();
+  const [isClient, setIsClient] = useState(false);
+  
+  // Set isClient to true when component mounts on client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   
   // Detect scroll for navbar effect
   useEffect(() => {
@@ -63,15 +71,23 @@ export default function Home() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Link href="/about" className="text-[#A3A3A3] hover:text-white transition-colors mr-6 hidden md:inline-block">
-              About
-            </Link>
-            <Link href="/auth/login" className="btn-outline text-sm md:text-base">
-            Login
-          </Link>
-            <Link href="/auth/register" className="btn-primary text-sm md:text-base">
-            Sign Up
-          </Link>
+
+            
+            {/* Show either Login/Sign Up buttons or Access button based on authentication state */}
+            {isClient && !isLoading && session ? (
+              <Link href="/dashboard" className="btn-primary text-sm md:text-base">
+                Access
+              </Link>
+            ) : (
+              <>
+                <Link href="/auth/login" className="btn-outline text-sm md:text-base">
+                  Login
+                </Link>
+                <Link href="/auth/register" className="btn-primary text-sm md:text-base">
+                  Sign Up
+                </Link>
+              </>
+            )}
           </motion.nav>
         </div>
       </motion.header>
@@ -120,16 +136,24 @@ export default function Home() {
               transition={{ duration: 0.7, delay: 0.5 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link href="/auth/register" className="group relative overflow-hidden rounded-full inline-block">
-                <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
-                <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
-                <span className="relative z-20 px-8 py-3 inline-block font-medium text-white">Get Started</span>
-              </Link>
+              {isClient && !isLoading && session ? (
+                <Link href="/dashboard" className="group relative overflow-hidden rounded-full inline-block">
+                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
+                  <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                  <span className="relative z-20 px-8 py-3 inline-block font-medium text-white">Go to Dashboard</span>
+                </Link>
+              ) : (
+                <Link href="/auth/register" className="group relative overflow-hidden rounded-full inline-block">
+                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
+                  <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                  <span className="relative z-20 px-8 py-3 inline-block font-medium text-white">Get Started</span>
+                </Link>
+              )}
               <Link href="/create-playlist" className="group relative overflow-hidden rounded-full inline-block">
                 <div className="absolute inset-0 w-full h-full bg-white/10 group-hover:scale-105 transition-transform duration-300"></div>
                 <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
                 <span className="relative z-20 px-8 py-3 inline-block font-medium text-white">Try Demo</span>
-          </Link>
+              </Link>
             </motion.div>
           </motion.div>
         </div>

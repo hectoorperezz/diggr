@@ -22,7 +22,7 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
     
     const { data, error } = await client
       .from('subscriptions')
-      .select('plan_type, status')
+      .select('plan_type, status, current_period_end, cancel_at_period_end')
       .eq('user_id', userId)
       .single();
 
@@ -31,7 +31,34 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
       return false;
     }
 
-    return data?.plan_type === 'premium' && data?.status === 'active';
+    // Check if the user has an active premium plan
+    if (data?.plan_type !== 'premium') {
+      return false;
+    }
+
+    // Check if the subscription is active
+    if (data?.status === 'active') {
+      return true;
+    }
+    
+    // If the subscription is canceled but the billing period hasn't ended yet,
+    // the user should still have premium access
+    if (data?.status === 'canceled' || data?.cancel_at_period_end === true) {
+      // Check if the current period end date is in the future
+      if (data?.current_period_end) {
+        const periodEndDate = new Date(data.current_period_end);
+        const now = new Date();
+        
+        // If current_period_end is in the future, the user still has premium access
+        if (periodEndDate > now) {
+          console.log(`User ${userId} has canceled subscription but still has premium access until ${periodEndDate.toISOString()}`);
+          return true;
+        }
+      }
+    }
+    
+    // Default to no premium access
+    return false;
   } catch (error) {
     console.error('Error checking subscription:', error);
     return false;
@@ -147,7 +174,7 @@ export async function getUserQuota(userId: string) {
       console.error('Error getting usage stats:', usageError);
       // Don't throw, use defaults
       return {
-        isPremium: subscription?.plan_type === 'premium' && subscription?.status === 'active',
+        isPremium: await hasActiveSubscription(userId),
         playlistsCreated: 0,
         playlistLimit: subscription?.plan_type === 'premium' ? Infinity : 5,
         resetDate: null,
@@ -155,11 +182,13 @@ export async function getUserQuota(userId: string) {
           plan: subscription?.plan_type || 'free',
           status: subscription?.status || 'inactive',
           currentPeriodEnd: subscription?.current_period_end,
+          cancelAtPeriodEnd: subscription?.cancel_at_period_end,
         },
       };
     }
 
-    const isPremium = subscription?.plan_type === 'premium' && subscription?.status === 'active';
+    // Use the updated hasActiveSubscription function
+    const isPremium = await hasActiveSubscription(userId);
     
     return {
       isPremium,
@@ -170,6 +199,7 @@ export async function getUserQuota(userId: string) {
         plan: subscription?.plan_type || 'free',
         status: subscription?.status || 'inactive',
         currentPeriodEnd: subscription?.current_period_end,
+        cancelAtPeriodEnd: subscription?.cancel_at_period_end,
       },
     };
   } catch (error) {
@@ -184,6 +214,7 @@ export async function getUserQuota(userId: string) {
         plan: 'free',
         status: 'inactive',
         currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
       },
     };
   }

@@ -4,7 +4,17 @@ import { setupVite, serveStatic, log } from "./vite";
 import { configureSessionMiddleware, setupAuthRoutes } from "./auth";
 
 const app = express();
-app.use(express.json());
+
+// Middleware to handle raw body for Stripe webhooks
+// and JSON body for other routes.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.originalUrl === '/api/stripe/webhook') {
+    express.raw({ type: 'application/json' })(req, res, next);
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
 app.use(express.urlencoded({ extended: false }));
 
 // Configure session middleware
