@@ -17,11 +17,17 @@
 
 # misc
 .DS_Store
+**/.DS_Store
 *.pem
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+*~
+.*.swp
+._*
+.Spotlight-V100
+.Trashes
 
 # debug
 npm-debug.log*

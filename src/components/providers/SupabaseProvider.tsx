@@ -13,6 +13,7 @@ interface UserProfile {
   created_at: string;
   updated_at?: string;
   spotify_refresh_token?: string | null;
+  plan_type?: 'free' | 'premium';
 }
 
 type SupabaseContextType = {
@@ -153,7 +154,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
                         spotify_connected: !!refreshedData.spotify_connected,
                         created_at: refreshedData.created_at || created_at,
                         updated_at: refreshedData.updated_at,
-                        spotify_refresh_token: refreshedData.spotify_refresh_token
+                        spotify_refresh_token: refreshedData.spotify_refresh_token,
+                        plan_type: refreshedData.plan_type || 'free'
                       } as UserProfile;
                     }
                   }
@@ -175,7 +177,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
               spotify_connected: !!userData.spotify_connected,
               created_at: userData.created_at || created_at,
               updated_at: userData.updated_at,
-              spotify_refresh_token: userData.spotify_refresh_token
+              spotify_refresh_token: userData.spotify_refresh_token,
+              plan_type: userData.plan_type || 'free'
             } as UserProfile;
             
             console.log('Returning new user profile with created_at:', profile.created_at);
@@ -229,14 +232,16 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         spotify_connected: !!data.spotify_connected, // Ensure this is a boolean
         created_at: data.created_at || created_at, // Use auth user created_at as fallback
         updated_at: data.updated_at,
-        spotify_refresh_token: data.spotify_refresh_token
+        spotify_refresh_token: data.spotify_refresh_token,
+        plan_type: data.plan_type || 'free' // Use 'free' as fallback
       } as UserProfile;
       
       console.log('Final user profile being returned:', {
         id: profile.id,
         email: profile.email,
         created_at: profile.created_at,
-        spotify_connected: profile.spotify_connected
+        spotify_connected: profile.spotify_connected,
+        plan_type: profile.plan_type
       });
       
       return profile;
@@ -501,14 +506,36 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      // Limpiar estado local primero
+      setSession(null);
+      setUser(null);
+      setUserProfile(null);
+      
+      console.log('Iniciando cierre de sesión...');
+      
+      // Esperar a que supabase termine el signout
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log('Sesión cerrada correctamente en el servidor');
       toast.success('Signed out successfully!');
       
-      // Use window.location for a full page reload
-      window.location.href = '/';
+      // Pequeña pausa para asegurar que todo se limpie correctamente
+      setTimeout(() => {
+        // Forzar limpieza completa con reload en lugar de navegación simple
+        window.location.href = '/';
+      }, 100);
     } catch (error) {
-      toast.error('Error signing out');
       console.error('Sign out error:', error);
+      toast.error('Error signing out');
+      
+      // Aún así intentar redirigir al usuario a la página de inicio
+      setTimeout(() => {
+        window.location.href = '/auth/login';
+      }, 1000);
     }
   };
 

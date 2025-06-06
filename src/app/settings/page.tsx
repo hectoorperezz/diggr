@@ -9,6 +9,7 @@ import { getSpotifyAuthURL } from '@/lib/spotify/auth';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import Button from '@/components/ui/Button';
+import AdBanner from '@/components/ads/AdBanner';
 
 // SearchParamsHandler is a small component that just handles the searchParams
 // and passes the data to its parent through a callback
@@ -304,6 +305,23 @@ export default function SettingsPage() {
     }
   };
 
+  // Añadir la función de manejo de cierre de sesión
+  const handleSignOut = async () => {
+    try {
+      // Mostrar notificación de carga
+      toast.loading('Signing out...', { id: 'signout' });
+      
+      // Esperar a que se complete el signOut
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Failed to sign out. Please try again.');
+      
+      // Asegurarse de limpiar la notificación de carga
+      toast.dismiss('signout');
+    }
+  };
+
   if (isLoading || (spotifyStatus === null && !isClient)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -356,7 +374,7 @@ export default function SettingsPage() {
       <Suspense fallback={null}>
         <SearchParamsHandler onParamsChange={handleParamsChange} />
       </Suspense>
-
+      
       <div className="min-h-screen bg-black overflow-hidden">
         {/* Animated background */}
         <div className="fixed inset-0 -z-10">
@@ -405,7 +423,10 @@ export default function SettingsPage() {
         </motion.header>
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <motion.h1 
+          {/* Anuncio sutil en la parte superior */}
+          <AdBanner variant="inline" className="mb-8" />
+          
+          <motion.h1
             className="text-4xl font-bold mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -415,10 +436,50 @@ export default function SettingsPage() {
           </motion.h1>
           
           <div className="space-y-8">
+            {/* Show success/error messages from params */}
+            {urlParams.success && (
+              <motion.div
+                className="relative mb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-green-500/30 to-[#1DB954]/30 opacity-70 blur-md"></div>
+                <div className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-md border border-green-500/20 rounded-xl p-4">
+                  <p className="flex items-center text-green-100">
+                    <span className="mr-2 text-xl">✅</span>
+                    {urlParams.success === 'spotify_connected' ? 'Spotify connected successfully!' : 
+                     urlParams.success === 'spotify_disconnected' ? 'Spotify disconnected successfully.' : 
+                     urlParams.success === 'subscription_updated' ? 'Subscription updated successfully!' :
+                     'Operation completed successfully.'}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {urlParams.error && (
+              <motion.div
+                className="relative mb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-red-500/30 to-purple-500/30 opacity-70 blur-md"></div>
+                <div className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-md border border-red-500/20 rounded-xl p-4">
+                  <p className="flex items-center text-red-100">
+                    <span className="mr-2 text-xl">❌</span>
+                    {urlParams.error === 'spotify_connection_required' ? 'Please connect your Spotify account to create playlists.' :
+                     urlParams.error === 'spotify_connection_failed' ? 'Failed to connect Spotify account. Please try again.' : 
+                     urlParams.error}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+            
             {/* Account Information */}
             <motion.div
               className="relative"
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
@@ -584,10 +645,13 @@ export default function SettingsPage() {
               </motion.div>
             </motion.div>
             
+            {/* Anuncio entre las secciones principales */}
+            <AdBanner variant="card" className="my-8" />
+            
             {/* Spotify Connection */}
             <motion.div
               className="relative"
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
@@ -683,7 +747,7 @@ export default function SettingsPage() {
                 </div>
               </motion.div>
             </motion.div>
-
+            
             {/* Back to Dashboard Button */}
             <motion.div
               className="flex justify-center mt-8"
@@ -706,7 +770,7 @@ export default function SettingsPage() {
                 </Button>
                 
                 <Button 
-                  onClick={signOut}
+                  onClick={handleSignOut}
                   variant="danger"
                   size="lg"
                   icon={
@@ -719,6 +783,9 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </motion.div>
+            
+            {/* Anuncio al final de la página */}
+            <AdBanner variant="inline" className="mt-12" />
           </div>
         </main>
       </div>

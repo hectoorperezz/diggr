@@ -8,6 +8,13 @@ import { motion } from 'framer-motion';
 import Button from '@/components/ui/Button';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import SubscriptionStatus from '@/components/ui/SubscriptionStatus';
+import AdBanner from '@/components/ads/AdBanner';
+import ConditionalAdDisplay from '@/components/ads/ConditionalAdDisplay';
+import { toast } from 'react-hot-toast';
+
+// Para depuración: Muestra si estamos en desarrollo o producción
+const isDevMode = process.env.NODE_ENV === 'development';
+console.log(`Entorno Dashboard: ${isDevMode ? 'DESARROLLO' : 'PRODUCCIÓN'}`);
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -93,7 +100,19 @@ export default function DashboardPage() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      // Mostrar notificación de carga
+      toast.loading('Signing out...', { id: 'signout' });
+      
+      // Esperar a que se complete el signout
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Failed to sign out. Please try again.');
+      
+      // Asegurarse de limpiar la notificación de carga
+      toast.dismiss('signout');
+    }
   };
 
   // Fetch subscription data for dashboard display
@@ -438,6 +457,11 @@ export default function DashboardPage() {
               </div>
             </motion.div>
           </div>
+          
+          {/* Anuncio regular usando AdBanner con ConditionalAdDisplay */}
+          <ConditionalAdDisplay>
+            <AdBanner variant="inline" className="my-8" />
+          </ConditionalAdDisplay>
         </motion.div>
 
         {userProfile?.spotify_connected === false && (
@@ -592,9 +616,45 @@ export default function DashboardPage() {
           </div>
           
           <RecentPlaylists />
+          
+          {/* Ad banner integrated naturally at the bottom of the dashboard - solo si no hay error */}
+          <RecentPlaylistsBottomAd />
         </motion.div>
       </main>
     </div>
+  );
+}
+
+// Componente para mostrar anuncios solo cuando no hay errores de carga
+function RecentPlaylistsBottomAd() {
+  const [playlistsError, setPlaylistsError] = useState(false);
+  
+  // Suscribirse al evento custom de error de playlists
+  useEffect(() => {
+    const handlePlaylistError = (event: CustomEvent) => {
+      setPlaylistsError(event.detail.hasError);
+    };
+    
+    // Usar window para evento personalizado
+    window.addEventListener('playlistsLoadState' as any, handlePlaylistError as any);
+    
+    return () => {
+      window.removeEventListener('playlistsLoadState' as any, handlePlaylistError as any);
+    };
+  }, []);
+  
+  // Solo mostrar anuncios si no hay errores de carga
+  if (playlistsError) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('No mostrando anuncios debido a error de carga de playlists');
+    }
+    return null;
+  }
+  
+  return (
+    <ConditionalAdDisplay>
+      <AdBanner variant="card" className="mt-10" />
+    </ConditionalAdDisplay>
   );
 }
 
@@ -603,11 +663,32 @@ function RecentPlaylists() {
   const [playlists, setPlaylists] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const { session } = useSupabase();
   
-  // Function to fetch playlists
+  // Dispatchar evento para informar del estado de carga de playlists
+  const notifyPlaylistsLoadState = useCallback((hasError: boolean) => {
+    // Evento custom para comunicar estado de carga
+    const event = new CustomEvent('playlistsLoadState', { 
+      detail: { hasError } 
+    });
+    window.dispatchEvent(event);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Playlist load state changed: ${hasError ? 'ERROR' : 'OK'}`);
+    }
+  }, []);
+  
+  // Function to fetch playlists with retry
   const fetchRecentPlaylists = useCallback(async () => {
     try {
       setIsLoading(true);
+      setError(null);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Fetching recent playlists...');
+      }
+      
       const response = await fetch('/api/playlists?limit=8', { 
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache' }
@@ -619,13 +700,34 @@ function RecentPlaylists() {
       
       const data = await response.json();
       setPlaylists(data.playlists || []);
+      
+      // Notificar que la carga fue exitosa
+      notifyPlaylistsLoadState(false);
+      
+      // Reset retry counter on success
+      setRetryCount(0);
     } catch (err) {
       console.error('Error fetching recent playlists:', err);
       setError('Unable to load recent playlists');
+      
+      // Notificar que hubo un error
+      notifyPlaylistsLoadState(true);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [notifyPlaylistsLoadState]);
+  
+  // Handle manual retry with exponential backoff
+  const handleRetry = useCallback(async () => {
+    // Prevent excessive retries
+    if (retryCount > 3) {
+      console.warn('Too many retry attempts');
+      return;
+    }
+    
+    setRetryCount(prev => prev + 1);
+    await fetchRecentPlaylists();
+  }, [fetchRecentPlaylists, retryCount]);
   
   useEffect(() => {
     fetchRecentPlaylists();
@@ -660,10 +762,11 @@ function RecentPlaylists() {
       <div className="bg-[#181818]/50 rounded-xl p-6 text-center">
         <p className="text-[#A3A3A3]">{error}</p>
         <button 
-          onClick={() => window.location.reload()} 
+          onClick={handleRetry}
           className="mt-4 px-4 py-2 bg-[#1DB954]/20 rounded-full text-[#1DB954] text-sm hover:bg-[#1DB954]/30 transition-colors"
+          disabled={isLoading}
         >
-          Try Again
+          {isLoading ? 'Trying...' : 'Try Again'}
         </button>
       </div>
     );
@@ -687,65 +790,89 @@ function RecentPlaylists() {
     );
   }
   
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {playlists.map((playlist) => (
-        <motion.div
-          key={playlist.id}
-          className="group relative"
-          whileHover={{ y: -5 }}
-          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-        >
-          <Link href={`/playlists/${playlist.id}`}>
-            <div className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-md border border-white/5 rounded-xl overflow-hidden">
-              {/* Playlist Cover */}
-              <div className="aspect-square w-full overflow-hidden">
-                {playlist.image_url ? (
-                  <img 
-                    src={playlist.image_url} 
-                    alt={playlist.name} 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = '';
-                      if (e.currentTarget.parentElement) {
-                        e.currentTarget.parentElement.innerHTML = `
-                          <div class="w-full h-full bg-[#282828] flex flex-col items-center justify-center">
-                            <span class="text-5xl mb-2">🎵</span>
-                          </div>
-                        `;
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-[#282828] flex flex-col items-center justify-center">
-                    <span className="text-5xl mb-2">🎵</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Playlist Info */}
-              <div className="p-4">
-                <h3 className="font-medium text-white truncate">{playlist.name}</h3>
-                <p className="text-sm text-[#A3A3A3] mt-1 truncate">{playlist.track_count} tracks</p>
-              </div>
-              
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform">
-                  <div className="w-12 h-12 rounded-full bg-[#1DB954] flex items-center justify-center">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                    </svg>
-                  </div>
+  // Add this to display an ad after the second playlist - Solo si no hay error
+  const renderPlaylistsWithAds = (playlists) => {
+    if (!playlists || playlists.length === 0) {
+      return (
+        <div className="text-center py-8 text-[#A3A3A3]">
+          <p>You haven't created any playlists yet.</p>
+        </div>
+      );
+    }
+
+    // Create a PlaylistCard component inline
+    const PlaylistCard = ({ playlist }) => (
+      <motion.div
+        className="group relative"
+        whileHover={{ y: -5 }}
+        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+      >
+        <Link href={`/playlists/${playlist.id}`}>
+          <div className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-md border border-white/5 rounded-xl overflow-hidden">
+            {/* Playlist Cover */}
+            <div className="aspect-square w-full overflow-hidden">
+              {playlist.image_url ? (
+                <img 
+                  src={playlist.image_url} 
+                  alt={playlist.name} 
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '';
+                    if (e.currentTarget.parentElement) {
+                      e.currentTarget.parentElement.innerHTML = `
+                        <div class="w-full h-full bg-[#282828] flex flex-col items-center justify-center">
+                          <span class="text-5xl mb-2">🎵</span>
+                        </div>
+                      `;
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-[#282828] flex flex-col items-center justify-center">
+                  <span className="text-5xl mb-2">🎵</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Playlist Info */}
+            <div className="p-4">
+              <h3 className="font-medium text-white truncate">{playlist.name}</h3>
+              <p className="text-sm text-[#A3A3A3] mt-1 truncate">{playlist.track_count} tracks</p>
+            </div>
+            
+            {/* Hover Overlay */}
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                <div className="w-12 h-12 rounded-full bg-[#1DB954] flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
                 </div>
               </div>
             </div>
-          </Link>
-        </motion.div>
-      ))}
-    </div>
-  );
+          </div>
+        </Link>
+      </motion.div>
+    );
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {playlists.map((playlist, index) => (
+          <React.Fragment key={playlist.id}>
+            <PlaylistCard playlist={playlist} />
+            {index === 1 && !error && (
+              <ConditionalAdDisplay>
+                <AdBanner variant="card" className="flex items-center justify-center" />
+              </ConditionalAdDisplay>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+  
+  return renderPlaylistsWithAds(playlists);
 }
 
 // Simple component to display the member date that only fetches once
