@@ -15,6 +15,18 @@ import {
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
+import ConditionalAdDisplay from '@/components/ads/ConditionalAdDisplay';
+
+// For TypeScript
+type UserProfileWithPlan = {
+  id: string;
+  email: string;
+  spotify_connected: boolean;
+  created_at: string;
+  updated_at?: string;
+  spotify_refresh_token?: string | null;
+  plan_type?: 'free' | 'premium';
+};
 
 // Define the wizard steps
 type WizardStep = 'genre' | 'mood' | 'era' | 'region' | 'details' | 'review';
@@ -46,7 +58,10 @@ export interface PlaylistFormData {
 
 export default function CreatePlaylistPage() {
   const router = useRouter();
-  const { session, isLoading: authLoading } = useSupabase();
+  const { session, isLoading: authLoading, userProfile } = useSupabase();
+  
+  // Type assertion for userProfile to include plan_type
+  const userProfileWithPlan = userProfile as UserProfileWithPlan | null;
   
   // State for tracking current step
   const [currentStep, setCurrentStep] = useState<WizardStep>('genre');
@@ -107,8 +122,10 @@ export default function CreatePlaylistPage() {
   // Define creation process states
   const [creationStep, setCreationStep] = useState<string>('idle');
   const [creationProgress, setCreationProgress] = useState(0);
+  const [adComplete, setAdComplete] = useState(false);
+  const [playlistId, setPlaylistId] = useState<string | null>(null);
 
-  // Handle form submission with improved UI feedback
+  // Handle form submission with improved UI feedback and ad integration
   const handleSubmit = async () => {
     if (!session?.user) {
       router.push('/auth?returnTo=/create-playlist');
@@ -211,20 +228,17 @@ export default function CreatePlaylistPage() {
         
         setCreationStep('complete');
         setCreationProgress(100);
+        setPlaylistId(createdPlaylist.dbPlaylist.id);
         
-        // Add a longer delay before redirecting to ensure cover image is fully processed
-        if (formData.coverImage) {
-          setCreationStep('finalizing');
-          // Wait for cover image to be fully processed by Spotify
-          setTimeout(() => {
-            router.push(`/playlists/${createdPlaylist.dbPlaylist.id}?success=true`);
-          }, 2000); // Longer delay to ensure cover image is processed
-        } else {
-          // No cover image, redirect with a shorter delay
-          setTimeout(() => {
-            router.push(`/playlists/${createdPlaylist.dbPlaylist.id}?success=true`);
-          }, 1000);
+        // For free users, we'll only redirect after they view the ad
+        // For premium users, we'll redirect right away
+        const isFreeUser = !userProfileWithPlan?.plan_type || userProfileWithPlan.plan_type === 'free';
+        
+        if (!isFreeUser) {
+          // Premium user - proceed directly
+          handleContinueToPlaylist();
         }
+        // Free users will wait for ad completion or manual continue
       } else {
         throw new Error('No tracks found for your criteria. Please try different selections.');
       }
@@ -233,6 +247,54 @@ export default function CreatePlaylistPage() {
       setCreationStep('error');
       setIsLoading(false);
       toast.error(error instanceof Error ? error.message : 'An unexpected error occurred');
+    }
+  };
+
+  // Handle ad completion
+  const handleAdComplete = () => {
+    setAdComplete(true);
+    
+    // Track ad completion in analytics
+    if (window.gtag) {
+      window.gtag('event', 'ad_completed', {
+        'event_category': 'ads',
+        'event_label': 'playlist_creation'
+      });
+    }
+    
+    // If playlist is complete, proceed to playlist view
+    if (creationStep === 'complete' && playlistId) {
+      handleContinueToPlaylist();
+    }
+  };
+  
+  // Handle ad error
+  const handleAdError = (error: any) => {
+    console.error('Ad error:', error);
+    setAdComplete(true);
+    
+    // If playlist is complete, proceed to playlist view even if ad failed
+    if (creationStep === 'complete' && playlistId) {
+      handleContinueToPlaylist();
+    }
+  };
+  
+  // Navigate to the created playlist
+  const handleContinueToPlaylist = () => {
+    if (!playlistId) return;
+    
+    // Add a longer delay before redirecting to ensure cover image is fully processed
+    if (formData.coverImage) {
+      setCreationStep('finalizing');
+      // Wait for cover image to be fully processed by Spotify
+      setTimeout(() => {
+        router.push(`/playlists/${playlistId}?success=true`);
+      }, 2000); // Longer delay to ensure cover image is processed
+    } else {
+      // No cover image, redirect with a shorter delay
+      setTimeout(() => {
+        router.push(`/playlists/${playlistId}?success=true`);
+      }, 1000);
     }
   };
 
@@ -332,22 +394,26 @@ export default function CreatePlaylistPage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="text-center mb-6">
-            <div className="text-5xl mb-4">{getCreationEmoji()}</div>
-            <h1 className="text-2xl font-bold mb-2">{getCreationMessage()}</h1>
-            <p className="text-[#A3A3A3]">This may take a moment</p>
-          </div>
-          
-          <div className="relative h-6 w-full bg-[#121212] rounded-full mb-4 overflow-hidden">
-            <motion.div 
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1DB954] to-purple-500 rounded-full"
-              initial={{ width: "0%" }}
-              animate={{ width: `${creationProgress}%` }}
-              transition={{ duration: 0.5 }}
+          {/* Show ads for free users when generation is complete */}
+          {creationStep === 'complete' ? (
+            <ConditionalAdDisplay
+              onAdComplete={handleAdComplete}
+              onAdError={handleAdError}
+              fallback={
+                <PlaylistReadyDisplay
+                  emoji={getCreationEmoji()}
+                  message={getCreationMessage()}
+                  onContinue={handleContinueToPlaylist}
+                />
+              }
             />
-          </div>
-          
-          <p className="text-center text-sm text-[#A3A3A3]">{creationProgress}% complete</p>
+          ) : (
+            <GeneratingDisplay
+              emoji={getCreationEmoji()}
+              message={getCreationMessage()}
+              progress={creationProgress}
+            />
+          )}
         </motion.div>
       </div>
     );
@@ -496,4 +562,53 @@ export default function CreatePlaylistPage() {
       </main>
     </div>
   );
-} 
+}
+
+// Playlist generation loading display
+const GeneratingDisplay = ({ emoji, message, progress }: { emoji: string, message: string, progress: number }) => (
+  <>
+    <div className="text-center mb-6">
+      <div className="text-5xl mb-4">{emoji}</div>
+      <h1 className="text-2xl font-bold mb-2">{message}</h1>
+      <p className="text-[#A3A3A3]">This may take a moment</p>
+    </div>
+    
+    <div className="relative h-6 w-full bg-[#121212] rounded-full mb-4 overflow-hidden">
+      <motion.div 
+        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1DB954] to-purple-500 rounded-full"
+        initial={{ width: "0%" }}
+        animate={{ width: `${progress}%` }}
+        transition={{ duration: 0.5 }}
+      />
+    </div>
+    
+    <p className="text-center text-sm text-[#A3A3A3]">{progress}% complete</p>
+  </>
+);
+
+// Playlist ready display for premium users (or after ad)
+const PlaylistReadyDisplay = ({ emoji, message, onContinue }: { emoji: string, message: string, onContinue: () => void }) => (
+  <>
+    <div className="text-center mb-6">
+      <div className="text-5xl mb-4">{emoji}</div>
+      <h1 className="text-2xl font-bold mb-2">{message}</h1>
+      <p className="text-[#A3A3A3]">Your playlist is ready to enjoy</p>
+    </div>
+    
+    <div className="flex justify-center">
+      <Button
+        variant="primary"
+        size="lg"
+        onClick={onContinue}
+        icon={
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        }
+        iconPosition="right"
+      >
+        View Your Playlist
+      </Button>
+    </div>
+  </>
+); 
