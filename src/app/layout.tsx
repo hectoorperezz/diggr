@@ -61,6 +61,25 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/images/diggr.png" />
         <meta name="msapplication-TileImage" content="/favicons/favicon.ico" />
         
+        {/* Google Analytics */}
+        <Script
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-YZEWKBJVE6"
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              
+              gtag('config', 'G-YZEWKBJVE6');
+            `,
+          }}
+        />
+        
         {/* Force refresh script for subscription status */}
         <Script id="force-refresh-script">
           {`
