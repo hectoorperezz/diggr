@@ -16,6 +16,7 @@ import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import ConditionalAdDisplay from '@/components/ads/ConditionalAdDisplay';
+import AdBanner from '@/components/ads/AdBanner';
 
 // For TypeScript
 type UserProfileWithPlan = {
@@ -484,6 +485,9 @@ export default function CreatePlaylistPage() {
       </motion.header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Ad banner at the top of the creation flow - subtly integrated */}
+        <AdBanner variant="inline" className="mb-6" />
+        
         <motion.div
           className="relative"
           initial={{ opacity: 0, y: 20 }}
@@ -559,12 +563,17 @@ export default function CreatePlaylistPage() {
             </motion.div>
           </AnimatePresence>
         </motion.div>
+        
+        {/* Ad banner at the bottom of the creation flow - after the creation UI */}
+        {currentStep === 'review' && (
+          <AdBanner variant="card" className="mt-10" />
+        )}
       </main>
     </div>
   );
 }
 
-// Playlist generation loading display
+// Modify GeneratingDisplay to include ad for free users
 const GeneratingDisplay = ({ emoji, message, progress }: { emoji: string, message: string, progress: number }) => (
   <>
     <div className="text-center mb-6">
@@ -582,7 +591,12 @@ const GeneratingDisplay = ({ emoji, message, progress }: { emoji: string, messag
       />
     </div>
     
-    <p className="text-center text-sm text-[#A3A3A3]">{progress}% complete</p>
+    <p className="text-center text-sm text-[#A3A3A3] mb-6">{progress}% complete</p>
+    
+    {/* Banner ad during generation process */}
+    {progress > 50 && progress < 90 && (
+      <AdBanner variant="inline" className="mt-6" />
+    )}
   </>
 );
 

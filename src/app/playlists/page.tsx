@@ -8,6 +8,7 @@ import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import Button from '@/components/ui/Button';
+import AdBanner from '@/components/ads/AdBanner';
 
 interface Playlist {
   id: string;
@@ -177,6 +178,9 @@ export default function PlaylistsPage() {
           </Button>
         </motion.div>
 
+        {/* Ad banner at the top of the playlists page */}
+        <AdBanner variant="inline" className="mb-8" />
+
         {error && (
           <motion.div
             className="relative mb-8"
@@ -327,6 +331,9 @@ export default function PlaylistsPage() {
             ))}
           </div>
         )}
+
+        {/* Ad banner at the bottom of the playlists page */}
+        <AdBanner variant="card" className="mt-12" />
       </main>
     </div>
   );

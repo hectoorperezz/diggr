@@ -825,4 +825,532 @@ Implement a Stripe webhook endpoint and handler logic to ensure that `plan_type`
 
 ### Lessons
 - When a feature reliant on webhooks isn't working as expected, first verify the webhook endpoint exists, is correctly configured to receive events (including raw body parsing for signature verification), and is processing the correct event types.
-- Mapping external plan/price IDs (like Stripe's) to internal application plan identifiers is a common requirement in webhook handlers. 
+- Mapping external plan/price IDs (like Stripe's) to internal application plan identifiers is a common requirement in webhook handlers.
+
+## Implementation Plan: Targeted Ads for Free Users During Playlist Creation
+
+### Background and Motivation
+To enhance the monetization strategy for Diggr, we need to implement video ads specifically for free tier users during the playlist creation process. This approach leverages a natural pause in user activity (when waiting for playlist generation) to show ads without disrupting the core user experience, while also creating a tangible benefit for premium subscribers who will enjoy an ad-free experience.
+
+### Key Requirements
+1. Ads should only be displayed to free tier users
+2. Ads should appear during the playlist creation loading/generation process
+3. Implementation should integrate with Google AdSense
+4. Premium upgrade CTAs should be presented alongside ads
+
+### Technical Analysis
+
+#### 1. User Subscription Status Detection
+We already have the subscription status infrastructure through the Supabase integration:
+- `useSupabase()` hook provides `userProfile` with plan information
+- Existing checks can determine if a user is on a free or premium plan
+- We'll leverage this to conditionally show ads
+
+#### 2. Playlist Creation Flow Analysis
+The playlist creation process occurs primarily in:
+- `/src/app/create-playlist/` - Frontend UI and wizard
+- `/src/app/api/playlist/generate/` - Backend API endpoint
+
+The key opportunity is during the API call to generate the playlist, when users are naturally waiting for results.
+
+#### 3. Optimal Integration Points
+The most effective point to show ads is:
+- After user submits playlist criteria
+- While the AI generation process is running
+- Before displaying the final playlist results
+
+This creates a non-disruptive ad experience that appears during a natural waiting period.
+
+### Implementation Plan
+
+#### 1. Create Video Ad Components
+
+**VideoAdComponent.tsx**
+```tsx
+import React, { useEffect, useRef, useState } from 'react';
+
+interface VideoAdProps {
+  onAdComplete?: () => void;
+  onAdError?: (error: any) => void;
+}
+
+export const VideoAdComponent: React.FC<VideoAdProps> = ({
+  onAdComplete,
+  onAdError,
+}) => {
+  const adContainerRef = useRef<HTMLDivElement>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [adError, setAdError] = useState<string | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState(5); // Skip countdown
+  const [canSkip, setCanSkip] = useState(false);
+  
+  // Handle ad initialization
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      // Initialize Google AdSense
+      const adScript = document.createElement('script');
+      adScript.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js";
+      adScript.async = true;
+      adScript.dataset.adClient = "ca-pub-XXXXXXXXXXXXXXXX"; // Publisher ID
+      document.head.appendChild(adScript);
+      
+      adScript.onload = () => {
+        if (adContainerRef.current) {
+          try {
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            setIsLoaded(true);
+            
+            // Track ad impression in Google Analytics
+            if (window.gtag) {
+              window.gtag('event', 'ad_impression', {
+                'event_category': 'ads',
+                'event_label': 'playlist_creation'
+              });
+            }
+          } catch (e) {
+            console.error("Ad push error:", e);
+            setAdError("Failed to load advertisement");
+            onAdError?.(e);
+          }
+        }
+      };
+      
+      // Error handling
+      adScript.onerror = (e) => {
+        console.error("Ad loading error:", e);
+        setAdError("Failed to load advertisement");
+        onAdError?.(e);
+      };
+    } catch (e) {
+      console.error("Ad initialization error:", e);
+      setAdError("Failed to load advertisement");
+      onAdError?.(e);
+    }
+  }, [onAdError]);
+  
+  // Skip button timer
+  useEffect(() => {
+    if (isLoaded && timeRemaining > 0) {
+      const timer = setTimeout(() => {
+        setTimeRemaining(timeRemaining - 1);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    } else if (isLoaded && timeRemaining === 0) {
+      setCanSkip(true);
+    }
+  }, [timeRemaining, isLoaded]);
+  
+  // Handle ad completion
+  const handleSkip = () => {
+    // Track skip event in Google Analytics
+    if (window.gtag) {
+      window.gtag('event', 'ad_skipped', {
+        'event_category': 'ads',
+        'event_label': 'playlist_creation'
+      });
+    }
+    
+    onAdComplete?.();
+  };
+  
+  return (
+    <div className="video-ad-container relative w-full max-w-xl mx-auto">
+      {/* Loading state */}
+      {!isLoaded && !adError && (
+        <div className="flex flex-col items-center justify-center h-40 bg-black/20 backdrop-blur-lg rounded-xl p-6">
+          <div className="animate-spin h-10 w-10 border-4 border-[#1DB954] border-t-transparent rounded-full mb-4"></div>
+          <p className="text-gray-300">Loading advertisement...</p>
+        </div>
+      )}
+      
+      {/* Error state */}
+      {adError && (
+        <div className="bg-black/20 backdrop-blur-lg rounded-xl p-6 text-center">
+          <p className="text-red-400 mb-4">Unable to load advertisement</p>
+          <button
+            onClick={handleSkip}
+            className="px-4 py-2 bg-[#1DB954] rounded-full text-sm"
+          >
+            Continue to Your Playlist
+          </button>
+        </div>
+      )}
+      
+      {/* Ad display */}
+      <div className={`ad-wrapper relative ${!isLoaded ? 'hidden' : ''}`}>
+        <ins
+          ref={adContainerRef}
+          className="adsbygoogle"
+          style={{ display: 'block', minHeight: '250px' }}
+          data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" // Publisher ID
+          data-ad-slot="XXXXXXXXXX" // Ad slot ID
+          data-ad-format="video"
+        />
+        
+        {/* Skip button */}
+        <div className="absolute bottom-4 right-4">
+          {canSkip ? (
+            <button
+              onClick={handleSkip}
+              className="px-3 py-1 bg-black/70 text-white text-sm rounded-full flex items-center"
+            >
+              Skip Ad
+              <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          ) : (
+            <div className="px-3 py-1 bg-black/70 text-white/70 text-sm rounded-full">
+              Skip in {timeRemaining}s
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Premium upgrade CTA */}
+      {isLoaded && (
+        <div className="mt-4 bg-black/30 backdrop-blur-md rounded-xl p-4 text-center">
+          <p className="text-sm text-gray-300 mb-2">
+            Enjoy an ad-free experience with Diggr Premium
+          </p>
+          <a
+            href="/pricing"
+            className="inline-block px-4 py-2 bg-gradient-to-r from-[#1DB954] to-purple-500 rounded-full text-sm font-medium"
+            onClick={() => {
+              // Track upgrade click
+              if (window.gtag) {
+                window.gtag('event', 'premium_cta_click', {
+                  'event_category': 'conversion',
+                  'event_label': 'from_ad'
+                });
+              }
+            }}
+          >
+            Upgrade to Premium
+          </a>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default VideoAdComponent;
+```
+
+**ConditionalAdDisplay.tsx**
+```tsx
+import React from 'react';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
+import VideoAdComponent from './VideoAdComponent';
+
+interface ConditionalAdDisplayProps {
+  onAdComplete?: () => void;
+  onAdError?: (error: any) => void;
+  fallback?: React.ReactNode; // Component to show for premium users
+}
+
+export const ConditionalAdDisplay: React.FC<ConditionalAdDisplayProps> = ({
+  onAdComplete,
+  onAdError,
+  fallback
+}) => {
+  const { userProfile } = useSupabase();
+  
+  // Check if user should see ads (free tier or no subscription)
+  const shouldShowAds = !userProfile?.plan_type || userProfile?.plan_type === 'free';
+  
+  if (!shouldShowAds) {
+    return <>{fallback}</>;
+  }
+  
+  return (
+    <VideoAdComponent
+      onAdComplete={onAdComplete}
+      onAdError={onAdError}
+    />
+  );
+};
+
+export default ConditionalAdDisplay;
+```
+
+#### 2. Integration with Playlist Creation Flow
+
+The playlist creation process should be modified to include the following steps:
+
+1. Submit playlist criteria and start generation
+2. For free users, show ad while playlist generates
+3. After ad completes or for premium users, show playlist results
+
+**PlaylistCreation.tsx (modified)**
+```tsx
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSupabase } from '@/components/providers/SupabaseProvider';
+import ConditionalAdDisplay from '@/components/ads/ConditionalAdDisplay';
+
+export default function PlaylistCreationComponent() {
+  const router = useRouter();
+  const { userProfile } = useSupabase();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showAd, setShowAd] = useState(false);
+  const [generationComplete, setGenerationComplete] = useState(false);
+  const [playlistId, setPlaylistId] = useState<string | null>(null);
+  
+  const handleCreatePlaylist = async (formData) => {
+    // Start playlist generation
+    setIsGenerating(true);
+    
+    // For free users, show ad immediately
+    const isFreeUser = !userProfile?.plan_type || userProfile.plan_type === 'free';
+    if (isFreeUser) {
+      setShowAd(true);
+    }
+    
+    try {
+      // Call API to generate playlist
+      const response = await fetch('/api/playlist/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate playlist');
+      }
+      
+      const data = await response.json();
+      setPlaylistId(data.id);
+      
+      // Mark generation as complete
+      setGenerationComplete(true);
+      
+      // If premium user or ad already completed, proceed to results
+      if (!showAd || !isFreeUser) {
+        handleContinueToPlaylist();
+      }
+      
+      // Track successful generation
+      if (window.gtag) {
+        window.gtag('event', 'playlist_generated', {
+          'event_category': 'engagement',
+          'event_label': isFreeUser ? 'free_user' : 'premium_user'
+        });
+      }
+    } catch (error) {
+      console.error('Error generating playlist:', error);
+      setIsGenerating(false);
+      // Handle error state
+    }
+  };
+  
+  const handleContinueToPlaylist = () => {
+    if (playlistId) {
+      router.push(`/playlists/${playlistId}`);
+    } else {
+      setIsGenerating(false);
+    }
+  };
+  
+  const handleAdComplete = () => {
+    // Track ad completion
+    if (window.gtag) {
+      window.gtag('event', 'ad_completed', {
+        'event_category': 'ads',
+        'event_label': 'playlist_creation'
+      });
+    }
+    
+    setShowAd(false);
+    
+    // If generation is already complete, proceed to playlist
+    if (generationComplete) {
+      handleContinueToPlaylist();
+    }
+  };
+  
+  const handleAdError = (error) => {
+    console.error('Ad error:', error);
+    
+    // Skip ad on error and proceed with normal flow
+    setShowAd(false);
+    
+    // If generation is complete, continue to playlist
+    if (generationComplete) {
+      handleContinueToPlaylist();
+    }
+  };
+  
+  return (
+    <div className="playlist-creation-container">
+      {/* Creation form - hide when generating */}
+      {!isGenerating && (
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target as HTMLFormElement);
+          // Process form data
+          handleCreatePlaylist({
+            // Form fields
+          });
+        }}>
+          {/* Form fields for playlist criteria */}
+          <button 
+            type="submit"
+            className="px-6 py-3 bg-[#1DB954] rounded-full"
+          >
+            Create Playlist
+          </button>
+        </form>
+      )}
+      
+      {/* Generation state with conditional ad */}
+      {isGenerating && (
+        <div className="generation-container">
+          {showAd ? (
+            <ConditionalAdDisplay
+              onAdComplete={handleAdComplete}
+              onAdError={handleAdError}
+              fallback={
+                <GeneratingPlaylist 
+                  isComplete={generationComplete} 
+                  onContinue={handleContinueToPlaylist} 
+                />
+              }
+            />
+          ) : (
+            <GeneratingPlaylist 
+              isComplete={generationComplete} 
+              onContinue={handleContinueToPlaylist} 
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Loading state component
+const GeneratingPlaylist = ({ isComplete, onContinue }) => {
+  return (
+    <div className="flex flex-col items-center justify-center p-8 bg-black/20 backdrop-blur-lg rounded-xl">
+      {!isComplete ? (
+        <>
+          <div className="animate-spin h-10 w-10 border-4 border-[#1DB954] border-t-transparent rounded-full mb-4"></div>
+          <h3 className="text-xl font-medium mb-2">Creating your perfect playlist...</h3>
+          <p className="text-[#A3A3A3]">Our AI is curating tracks tailored to your taste</p>
+        </>
+      ) : (
+        <>
+          <div className="w-16 h-16 bg-[#1DB954]/20 rounded-full flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-[#1DB954]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-medium mb-2">Your playlist is ready!</h3>
+          <button 
+            onClick={onContinue} 
+            className="mt-4 px-6 py-2 bg-[#1DB954] rounded-full"
+          >
+            View Your Playlist
+          </button>
+        </>
+      )}
+    </div>
+  );
+};
+```
+
+### Testing Strategy
+
+1. **User Type Testing**
+   - Test with free user accounts to verify ads display correctly
+   - Test with premium users to verify direct access without ads
+   - Test edge cases (e.g., expired subscriptions)
+
+2. **Ad Experience Testing**
+   - Test ad loading behavior
+   - Verify skip functionality after countdown
+   - Test error handling when ads fail to load
+   - Ensure premium CTA works properly
+
+3. **Integration Testing**
+   - Verify that playlist generation works correctly in parallel with ad display
+   - Test entire flow from form submission to playlist display
+   - Ensure no race conditions between ad completion and playlist generation
+
+### Analytics Integration
+
+To track the effectiveness of ads and their impact on conversions:
+
+1. **Custom Events to Track**
+   - `ad_impression` - When ad is successfully displayed
+   - `ad_completed` - When user watches the full ad
+   - `ad_skipped` - When user skips the ad
+   - `premium_cta_click` - When user clicks upgrade from ad
+   
+2. **Conversion Tracking**
+   - Track conversion rate from ad views to premium subscriptions
+   - Measure impact on user retention (do users who see ads return less?)
+   
+3. **Performance Metrics**
+   - Load time for ads
+   - Error rate for ad display
+   - Skip rate and average watch time
+
+### Implementation Timeline
+
+1. **Phase 1: Core Components (3-4 days)**
+   - Create VideoAdComponent
+   - Create ConditionalAdDisplay
+   - Set up Google AdSense integration
+
+2. **Phase 2: Integration (2-3 days)**
+   - Modify playlist creation flow
+   - Implement conditional logic for free vs premium
+   - Add analytics tracking
+
+3. **Phase 3: Testing & Optimization (3-4 days)**
+   - Test with different user types
+   - Measure performance and UX impact
+   - Optimize based on initial data
+
+### Success Criteria
+
+1. Ads are only shown to free tier users
+2. Ad display doesn't significantly impact playlist completion rate
+3. Premium CTAs alongside ads generate measurable conversions
+4. Ad integration generates revenue without hurting core metrics
+
+### Key Considerations
+
+1. **Performance Impact**
+   - Ad loading should not delay playlist generation
+   - Implement proper error handling to prevent blocking UX
+   
+2. **User Experience**
+   - Clear messaging about why ads are shown
+   - Seamless transitions between app and ad states
+   - Skip option after reasonable time
+   
+3. **Premium Value Proposition**
+   - Highlight ad-free experience in premium marketing
+   - Direct CTA from ad to pricing page
+   - Consider special offer for users upgrading from ad view
+
+### Next Steps
+
+1. Identify the exact files to modify in the codebase
+2. Develop and test the ad components in isolation
+3. Integrate with playlist creation flow
+4. Add analytics tracking
+5. Measure impact on both revenue and user experience
+
+### Expected Outcome
+
+- Free users will see video ads during playlist creation, with a premium upgrade CTA
+- Premium users will experience ad-free playlist creation
+- Ad performance and conversion data will be trackable via Google Analytics
+- The user experience remains smooth, with ads appearing at a natural waiting point 

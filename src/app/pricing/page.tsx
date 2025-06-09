@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
 import Button from '@/components/ui/Button';
 import { getUserQuota } from '@/lib/stripe/subscription';
+import AdBanner from '@/components/ads/AdBanner';
 
 export default function PricingPage() {
   const router = useRouter();
@@ -134,6 +135,9 @@ export default function PricingPage() {
             Select the perfect plan that fits your music discovery needs
           </motion.p>
         </div>
+
+        {/* Anuncio estratégicamente colocado justo antes de mostrar las opciones de precios */}
+        <AdBanner variant="inline" className="mb-12" />
 
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-8 text-center">
@@ -311,6 +315,21 @@ export default function PricingPage() {
             ))}
           </div>
         </div>
+
+        {/* Al final de la página, mostrando anuncio a usuarios gratuitos para mostrar el beneficio de premium */}
+        <AdBanner variant="card" className="mt-16 mb-8" />
+        
+        {/* Sección destacando los beneficios de premium sin anuncios */}
+        <motion.div
+          className="mt-8 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <p className="text-lg text-[#A3A3A3] mb-4">
+            Upgrade to Premium and enjoy an ad-free experience with unlimited playlists
+          </p>
+        </motion.div>
       </main>
     </div>
   );
