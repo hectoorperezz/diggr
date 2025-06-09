@@ -41,6 +41,9 @@ const ConditionalAdDisplay: React.FC<ConditionalAdDisplayProps> = memo(({
     isFree: false  // Por defecto asumimos que NO es cuenta free
   });
   
+  // Verificar si los anuncios están habilitados globalmente desde variables de entorno
+  const adsEnabled = process.env.NEXT_PUBLIC_ADS_ENABLED === 'true';
+  
   // Type assertion for userProfile to include plan_type
   const userProfileWithPlan = userProfile as UserProfileWithPlan | null;
   
@@ -116,21 +119,23 @@ const ConditionalAdDisplay: React.FC<ConditionalAdDisplayProps> = memo(({
         planTypeFromState: planInfo.plan_type,
         planTypeFromProfile: userProfileWithPlan?.plan_type,
         isFree: planInfo.isFree,
-        isAuthenticated: !!session?.user
+        isAuthenticated: !!session?.user,
+        adsEnabled
       });
     }
-  }, [planInfo, userProfileWithPlan?.plan_type, session?.user]);
+  }, [planInfo, userProfileWithPlan?.plan_type, session?.user, adsEnabled]);
   
   // Check if user should see ads (SOLO si se confirma que es free)
-  const shouldShowAds = forceShow || (planInfo.isLoaded && planInfo.isFree === true);
+  const shouldShowAds = (forceShow || (planInfo.isLoaded && planInfo.isFree === true)) && adsEnabled;
   
   // Log de depuración
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`ConditionalAdDisplay - shouldShowAds:`, shouldShowAds,
-        shouldShowAds ? 'MOSTRANDO ANUNCIOS (cuenta free confirmada)' : 'NO mostrando anuncios');
+        shouldShowAds ? 'MOSTRANDO ANUNCIOS (cuenta free confirmada)' : 'NO mostrando anuncios',
+        !adsEnabled ? '(ADS DESACTIVADOS GLOBALMENTE)' : '');
     }
-  }, [shouldShowAds]);
+  }, [shouldShowAds, adsEnabled]);
   
   // Debug log para usuarios premium
   useEffect(() => {

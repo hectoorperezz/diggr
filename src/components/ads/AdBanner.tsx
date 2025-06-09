@@ -33,6 +33,9 @@ const AdBanner: React.FC<AdBannerProps> = memo(({
     isFree: false // Por defecto asumimos que no es cuenta gratuita
   });
   
+  // Verificar si los anuncios están habilitados globalmente desde variables de entorno
+  const adsEnabled = process.env.NEXT_PUBLIC_ADS_ENABLED === 'true';
+  
   // Type assertion for userProfile to include plan_type
   const userProfileWithPlan = userProfile as UserProfileWithPlan | null;
   
@@ -114,21 +117,23 @@ const AdBanner: React.FC<AdBannerProps> = memo(({
         planTypeFromProfile: userProfileWithPlan?.plan_type,
         isAuthenticated: !!session?.user,
         isFree: planInfo.isFree,
-        variant
+        variant,
+        adsEnabled
       });
     }
-  }, [planInfo, userProfileWithPlan?.plan_type, session?.user, variant]);
+  }, [planInfo, userProfileWithPlan?.plan_type, session?.user, variant, adsEnabled]);
   
-  // Check if user should see ads (SOLO si se ha confirmado que es free)
-  const shouldShowAds = forceShow || (planInfo.isLoaded && planInfo.isFree === true);
+  // Check if user should see ads (SOLO si se ha confirmado que es free Y anuncios están activados)
+  const shouldShowAds = (forceShow || (planInfo.isLoaded && planInfo.isFree === true)) && adsEnabled;
   
   // Log de depuración
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`AdBanner (${variant}) - shouldShowAds:`, shouldShowAds, 
-        shouldShowAds ? 'MOSTRANDO ANUNCIOS (cuenta free confirmada)' : 'NO mostrando anuncios');
+        shouldShowAds ? 'MOSTRANDO ANUNCIOS (cuenta free confirmada)' : 'NO mostrando anuncios',
+        !adsEnabled ? '(ADS DESACTIVADOS GLOBALMENTE)' : '');
     }
-  }, [shouldShowAds, variant]);
+  }, [shouldShowAds, variant, adsEnabled]);
 
   // Debug log para usuarios premium
   useEffect(() => {
@@ -178,14 +183,16 @@ const AdBanner: React.FC<AdBannerProps> = memo(({
     'card': 'w-full bg-[#181818]/80 backdrop-filter backdrop-blur-lg border border-white/5 rounded-xl overflow-hidden my-4'
   }[variant];
   
-  // Get ad slot based on variant - Actualizados con el ID real proporcionado
+  // Get ad slot based on variant usando las variables de entorno
   const getAdSlot = () => {
+    const defaultSlot = process.env.NEXT_PUBLIC_ADSENSE_SLOT_ID || '2960918211';
+    
+    // Si hay slots específicos configurados para cada variante, los usaríamos aquí
     switch (variant) {
-      // ID real de AdSense
-      case 'sidebar': return '2960918211'; // ID real de "Diggr"
-      case 'inline': return '2960918211';  // Usando el mismo ID para inline
-      case 'card': return '2960918211';    // Usando el mismo ID para card
-      default: return '2960918211';        // ID por defecto
+      case 'sidebar': return process.env.NEXT_PUBLIC_ADSENSE_SIDEBAR_SLOT_ID || defaultSlot;
+      case 'inline': return process.env.NEXT_PUBLIC_ADSENSE_INLINE_SLOT_ID || defaultSlot;
+      case 'card': return process.env.NEXT_PUBLIC_ADSENSE_CARD_SLOT_ID || defaultSlot;
+      default: return defaultSlot;
     }
   };
   
@@ -217,8 +224,12 @@ const AdBanner: React.FC<AdBannerProps> = memo(({
             <div className="mt-1 p-1 bg-black/20 rounded text-[10px] font-mono text-white/60">
               Slot ID: {getAdSlot()}
             </div>
+            <div className="mt-1 p-1 bg-black/20 rounded text-[10px] font-mono text-white/60">
+              Client ID: {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "No configurado"}
+            </div>
             <div className="mt-2 text-[10px] text-white/40">
               Status: Usuario {planInfo.plan_type || 'desconocido'} ({planInfo.isFree ? 'gratuito' : 'premium'})
+              {!adsEnabled && <span className="ml-1 text-red-400">(ADS DESACTIVADOS)</span>}
             </div>
           </div>
         </div>
@@ -238,7 +249,7 @@ const AdBanner: React.FC<AdBannerProps> = memo(({
         <ins
           className="adsbygoogle"
           style={{ display: 'block', ...adSize }}
-          data-ad-client="ca-pub-3838039470797804" // Tu ID de publisher de AdSense
+          data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-3838039470797804"}
           data-ad-slot={getAdSlot()}
           data-ad-format="auto"
           data-full-width-responsive="true"
