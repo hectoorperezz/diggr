@@ -23,6 +23,7 @@ type SupabaseContextType = {
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 };
@@ -539,6 +540,34 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Google sign in function
+  const signInWithGoogle = async () => {
+    try {
+      console.log('Iniciando sesión con Google...');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
+      
+      if (error) {
+        console.error('Error iniciando sesión con Google:', error);
+        toast.error(error.message);
+        return { error };
+      }
+      
+      console.log('Redirección a Google Auth iniciada:', data);
+      
+      // No configuramos aquí el usuario ya que será manejado por la redirección OAuth
+      return { error: null };
+    } catch (error: any) {
+      console.error('Error inesperado al iniciar sesión con Google:', error);
+      toast.error('Ocurrió un error inesperado al conectar con Google');
+      return { error };
+    }
+  };
+
   const value = {
     user,
     userProfile,
@@ -546,6 +575,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
     refreshSession,
   };

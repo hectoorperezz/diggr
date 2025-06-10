@@ -1354,3 +1354,75 @@ To track the effectiveness of ads and their impact on conversions:
 - Premium users will experience ad-free playlist creation
 - Ad performance and conversion data will be trackable via Google Analytics
 - The user experience remains smooth, with ads appearing at a natural waiting point 
+
+### High-level Task Breakdown
+
+Tasks for Implementing Google Auth in Diggr:
+
+1. **Configure Google OAuth in Supabase**
+   - Create OAuth credentials in Google Cloud Platform
+   - Configure authorized redirect URIs
+   - Set up the provider in Supabase Authentication settings
+   - Success criteria: Google configuration is saved and active in Supabase dashboard
+   - Status: ✅ Completed
+
+2. **Implement Frontend Google Authentication**
+   - Add `signInWithGoogle` function to SupabaseProvider
+   - Add Google login button to LoginForm and RegisterForm
+   - Create a callback route handler for OAuth redirects
+   - Success criteria: Users can click Google button that redirects to Google auth and returns to the app
+   - Status: ✅ Completed
+
+3. **Handle User Profile for Google Auth**
+   - Ensure proper user profile creation on Google sign-in
+   - Test handling of Google user information (name, email, profile picture)
+   - Update profile management to handle Google-specific fields
+   - Success criteria: Google signed-in users have proper profile records in the database
+   - Status: 🔄 In Progress
+
+4. **Test Authentication Flow**
+   - Test sign-up with Google for new users
+   - Test sign-in with Google for existing users
+   - Test session persistence and token refresh
+   - Success criteria: Complete login flow works end-to-end with Google authentication
+   - Status: 🔄 In Progress
+
+5. **UI/UX Refinements**
+   - Add loading states for Google authentication
+   - Implement proper error handling for OAuth failures
+   - Add visual confirmation of successful authentication
+   - Success criteria: Smooth authentication experience with appropriate feedback to users
+   - Status: 🔄 In Progress
+
+## Project Status Board
+
+- [x] Configure Google OAuth in Supabase
+- [x] Add signInWithGoogle function to SupabaseProvider
+- [x] Add Google sign-in button to login form
+- [x] Add Google sign-up option to register form
+- [x] Create OAuth callback handler route
+- [ ] Test Google sign-in flow end-to-end
+- [ ] Verify user profiles are created correctly with Google auth
+- [ ] Handle profile pictures from Google accounts
+- [ ] Add proper error handling for OAuth failures
+- [ ] Document the authentication flow for future reference
+
+## Executor's Feedback or Assistance Requests
+
+The implementation of Google Authentication in Diggr is now partially complete. The following has been accomplished:
+
+1. Added `signInWithGoogle` function to SupabaseProvider
+2. Added Google auth buttons to both login and registration forms
+3. Created a callback route handler for OAuth redirections
+
+Next steps:
+1. Test the authentication flow with real Google accounts
+2. Verify user profiles are created correctly in the database
+3. Implement any necessary error handling for edge cases
+
+Question for consideration: Should we add functionality to link existing accounts with Google authentication after they're already created? This would allow users who registered with email/password to later connect their Google account.
+
+## Lessons
+- When implementing OAuth workflows, it's important to set up both provider (Google) and client application correctly
+- The callback route must be correctly configured to handle the OAuth redirect properly
+- In Next.js, server components require special consideration for authentication flows 
