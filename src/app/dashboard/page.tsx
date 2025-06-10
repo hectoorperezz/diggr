@@ -428,7 +428,7 @@ export default function DashboardPage() {
                   </div>
                   <h3 className="text-lg font-semibold">Playlists Created</h3>
                 </div>
-                <p className="text-3xl font-bold text-purple-400 mb-1">3</p>
+                <p className="text-3xl font-bold text-purple-400 mb-1">{subscriptionData?.playlistsCreated || 0}</p>
                 <p className="text-sm text-[#A3A3A3]">This month</p>
               </div>
             </motion.div>

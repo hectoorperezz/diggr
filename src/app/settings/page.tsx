@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
 import { toast } from 'react-hot-toast';
 import { getSpotifyAuthURL } from '@/lib/spotify/auth';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import Button from '@/components/ui/Button';
 import AdBanner from '@/components/ads/AdBanner';
@@ -67,6 +67,9 @@ export default function SettingsPage() {
   const [statusLoading, setStatusLoading] = useState(false);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [urlParams, setUrlParams] = useState<{success: string | null, error: string | null}>({success: null, error: null});
+  
+  // Create supabase client
+  const supabase = createClient();
 
   // Callback to receive search params data from the SearchParamsHandler
   const handleParamsChange = useCallback((success: string | null, error: string | null) => {
@@ -94,59 +97,44 @@ export default function SettingsPage() {
     }
   }, [isClient, session, user, refreshSession]);
 
-  // Fetch subscription data
+  // Check subscription data periodically 
   useEffect(() => {
-    // Create a flag to track if data is already being fetched
-    let isSubscriptionFetching = false;
-    let isMounted = true;
+    if (!isClient || !user?.id) return;
 
-    async function fetchSubscriptionData() {
-      if (!user || isSubscriptionFetching) return;
-      
-      isSubscriptionFetching = true;
-      
+    // Function to fetch subscription data
+    const fetchSubscriptionData = async () => {
       try {
-        console.log('Settings: Fetching subscription data for user:', user.id);
-        // Force refresh the session to ensure we have the latest data
-        await supabase.auth.refreshSession();
-        
-        const timestamp = new Date().getTime();
-        const response = await fetch(`/api/user/subscription?t=${timestamp}`, {
+        const response = await fetch('/api/user/subscription-data', {
+          method: 'GET',
           headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
+            'Cache-Control': 'no-cache'
           }
         });
         
-        if (response.ok && isMounted) {
-          const data = await response.json();
-          console.log('Settings: Subscription data received:', data);
-          
-          // Add more detailed logging
-          if (data.isPremium) {
-            console.log('Settings: User has premium subscription with plan:', data.subscription?.plan);
-          } else {
-            console.log('Settings: User is on free plan');
-          }
-          
-          setSubscriptionData(data);
-        } else {
-          console.error('Settings: Subscription data fetch failed with status:', response.status);
+        if (!response.ok) {
+          console.error('Failed to fetch subscription data:', response.status, response.statusText);
+          return;
         }
+        
+        const data = await response.json();
+        setSubscriptionData(data);
       } catch (error) {
-        console.error('Error fetching subscription data in settings:', error);
-      } finally {
-        isSubscriptionFetching = false;
+        console.error('Error fetching subscription data:', error);
       }
-    }
-    
+    };
+
+    // Initial fetch
     fetchSubscriptionData();
     
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.id, supabase.auth]);
+    // Then set up periodic refresh - only when tab is visible
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchSubscriptionData();
+      }
+    }, 60000); // refresh every minute when active
+    
+    return () => clearInterval(intervalId);
+  }, [isClient, user?.id]);
 
   // Determine Spotify connection status from userProfile or database
   const determineSpotifyStatus = useCallback(async () => {
@@ -274,21 +262,39 @@ export default function SettingsPage() {
   };
 
   const disconnectSpotify = async () => {
+    // Prevent multiple requests
+    if (isDisconnecting) {
+      toast.error('Disconnection already in progress, please wait');
+      return;
+    }
+    
     try {
       setIsDisconnecting(true);
       
       console.log('Disconnecting Spotify account...');
-      const { error } = await supabase
-        .from('users')
-        .update({
-          spotify_connected: false,
-          spotify_refresh_token: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user?.id);
-
-      if (error) throw error;
-
+      
+      // Add timeout for fetch to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      // Use API endpoint instead of direct database update
+      const response = await fetch('/api/spotify/disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to disconnect Spotify account: ${response.status}`);
+      }
+      
       // Update local state immediately for UI responsiveness
       setSpotifyStatus(false);
       
@@ -299,7 +305,36 @@ export default function SettingsPage() {
       console.log('Spotify account disconnected successfully');
     } catch (error) {
       console.error('Error disconnecting from Spotify:', error);
-      toast.error('Failed to disconnect from Spotify. Please try again.');
+      
+      // Fallback direct database update if API fails with "Failed to fetch"
+      if (error instanceof Error && error.message.includes('fetch')) {
+        try {
+          console.log('API fetch failed, attempting direct database update...');
+          
+          const { error: dbError } = await supabase
+            .from('users')
+            .update({
+              spotify_connected: false,
+              spotify_refresh_token: null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user?.id);
+          
+          if (dbError) {
+            throw new Error(`Database fallback failed: ${dbError.message}`);
+          }
+          
+          // Update local state
+          setSpotifyStatus(false);
+          await refreshSession();
+          toast.success('Spotify account disconnected successfully (fallback method)');
+          return;
+        } catch (fallbackError) {
+          console.error('Fallback disconnect method failed:', fallbackError);
+        }
+      }
+      
+      toast.error(error instanceof Error ? error.message : 'Failed to disconnect from Spotify. Please try again.');
     } finally {
       setIsDisconnecting(false);
     }
@@ -780,6 +815,19 @@ export default function SettingsPage() {
                   }
                 >
                   Log Out
+                </Button>
+
+                <Button 
+                  href="/settings/delete-account"
+                  variant="danger"
+                  size="lg"
+                  icon={
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  }
+                >
+                  Delete Account
                 </Button>
               </div>
             </motion.div>

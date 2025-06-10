@@ -24,6 +24,7 @@ type SupabaseContextType = {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
+  signInWithSpotify: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 };
@@ -45,6 +46,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   // Create supabase client
   const supabase = createClient();
 
+  // Track last refresh time to prevent too frequent refreshes
+  const [lastRefreshTime, setLastRefreshTime] = useState(0);
+  
   // Fetch user profile data with enhanced debugging
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -254,7 +258,16 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
   const refreshSession = async () => {
     try {
+      // Prevent refreshing more than once per second
+      const now = Date.now();
+      if (now - lastRefreshTime < 1000) {
+        console.log('Refresh throttled, too many calls');
+        return;
+      }
+      
+      setLastRefreshTime(now);
       console.log('Refreshing session...');
+      
       const { data } = await supabase.auth.getSession();
       
       if (data.session) {
@@ -263,12 +276,15 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         console.log('No session found during refresh');
       }
       
-      setSession(data.session);
-      setUser(data.session?.user || null);
-      
-      if (data.session?.user) {
-        const profile = await fetchUserProfile(data.session.user.id);
-        setUserProfile(profile);
+      // Only update state if session actually changed to prevent loops
+      if (!session || !data.session || session.user?.id !== data.session.user?.id) {
+        setSession(data.session);
+        setUser(data.session?.user || null);
+        
+        if (data.session?.user) {
+          const profile = await fetchUserProfile(data.session.user.id);
+          setUserProfile(profile);
+        }
       }
     } catch (error) {
       console.error('Error refreshing session:', error);
@@ -352,18 +368,11 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         
         if (data?.session?.user) {
           try {
-            // Use a timeout to fetch profile to avoid race conditions
-            setTimeout(async () => {
-              try {
-                const profile = await fetchUserProfile(data.session.user.id);
-                setUserProfile(profile);
-              } catch (profileErr) {
-                console.error('Error in delayed profile fetch:', profileErr);
-              }
-            }, 500);
-          } catch (err) {
-            console.error('Error setting up profile fetch:', err);
-            // Continue even if profile fetch setup fails
+            // Fetch user profile immediately instead of setTimeout
+            const profile = await fetchUserProfile(data.session.user.id);
+            setUserProfile(profile);
+          } catch (profileErr) {
+            console.error('Error in profile fetch:', profileErr);
           }
         }
       } catch (error) {
@@ -398,20 +407,28 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         
-        setSession(currentSession);
-        setUser(currentSession?.user || null);
+        // Skip if nothing has changed - the session and user are the same
+        // This prevents infinite loops of fetch requests
+        if (session?.user?.id === currentSession?.user?.id && 
+            event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') {
+          console.log('Auth state change detected but user ID unchanged, skipping fetch');
+          return;
+        }
         
-        // Delay profile fetching to prevent race conditions
+        // Only update these states if the session actually changed
+        if (session?.user?.id !== currentSession?.user?.id || !session || !currentSession) {
+          setSession(currentSession);
+          setUser(currentSession?.user || null);
+        }
+        
         if (currentSession?.user) {
-          // Use a short delay to allow auth state to settle
-          setTimeout(async () => {
-            try {
-              const profile = await fetchUserProfile(currentSession.user.id);
-              setUserProfile(profile);
-            } catch (err) {
-              console.error('Error in delayed profile fetch during auth change:', err);
-            }
-          }, 500);
+          try {
+            // Fetch profile directly without setTimeout to prevent race conditions
+            const profile = await fetchUserProfile(currentSession.user.id);
+            setUserProfile(profile);
+          } catch (err) {
+            console.error('Error in profile fetch during auth change:', err);
+          }
         } else {
           setUserProfile(null);
         }
@@ -430,7 +447,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router, authInitialized]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to ensure this only runs once
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -451,6 +469,40 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       // Wait for session to be set
       setSession(data.session);
       setUser(data.user);
+      
+      // Verificar si la cuenta está eliminada
+      try {
+        console.log('Verificando si la cuenta está eliminada...');
+        const checkResponse = await fetch('/api/auth/check-deleted', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        const checkResult = await checkResponse.json();
+        
+        if (checkResult.status === 'account_deleted') {
+          console.error('Cuenta eliminada intentando iniciar sesión:', email);
+          
+          // Si la cuenta está eliminada, ya se cerró la sesión en el API
+          // Limpiar estado local
+          setSession(null);
+          setUser(null);
+          setUserProfile(null);
+          
+          // Redirigir a la página de cuenta eliminada con parámetros
+          setTimeout(() => {
+            const redirectUrl = checkResult.redirectUrl || '/account-deleted';
+            window.location.href = redirectUrl;
+          }, 100);
+          
+          return { error: new Error(checkResult.message || 'Esta cuenta ha sido eliminada') };
+        }
+      } catch (checkError) {
+        console.error('Error verificando estado de cuenta:', checkError);
+        // Continuar incluso si hay error en la verificación
+      }
       
       if (data.user) {
         try {
@@ -568,6 +620,53 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Spotify sign in function
+  const signInWithSpotify = async () => {
+    try {
+      console.log('Iniciando sesión con Spotify...');
+      
+      // Check if Spotify provider is properly configured
+      try {
+        const { data: authData } = await supabase.auth.getSession();
+        console.log('Current session state before Spotify auth:', {
+          hasSession: !!authData.session,
+          user: authData.session?.user?.email || 'none'
+        });
+      } catch (sessionError) {
+        console.error('Error checking session before Spotify auth:', sessionError);
+      }
+      
+      // Initiate OAuth flow with Spotify
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'spotify',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: 'user-read-email playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative user-read-private'
+        }
+      });
+      
+      if (error) {
+        console.error('Error iniciando sesión con Spotify:', error);
+        toast.error(error.message);
+        return { error };
+      }
+      
+      console.log('Redirección a Spotify Auth iniciada:', {
+        url: data.url,
+        provider: data.provider,
+        hasUrl: !!data.url
+      });
+      
+      // User and session will be handled by the OAuth redirect callback
+      return { error: null };
+    } catch (error: any) {
+      console.error('Error inesperado al iniciar sesión con Spotify:', error);
+      console.error('Error details:', error.stack || 'No stack trace available');
+      toast.error('Ocurrió un error inesperado al conectar con Spotify');
+      return { error };
+    }
+  };
+
   const value = {
     user,
     userProfile,
@@ -576,6 +675,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signInWithGoogle,
+    signInWithSpotify,
     signOut,
     refreshSession,
   };

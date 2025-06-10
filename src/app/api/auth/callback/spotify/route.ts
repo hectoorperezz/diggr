@@ -3,6 +3,7 @@ import { Buffer } from 'buffer';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -111,6 +112,56 @@ export async function GET(request: NextRequest) {
       hasRefreshToken: !!tokens.refresh_token,
     });
     
+    // Get the user info from Spotify to get the Spotify user ID
+    const userProfileResponse = await fetch('https://api.spotify.com/v1/me', {
+      headers: {
+        'Authorization': `Bearer ${tokens.access_token}`
+      }
+    });
+    
+    if (!userProfileResponse.ok) {
+      console.error('Error getting Spotify user profile:', userProfileResponse.status);
+      return NextResponse.redirect(
+        requestUrl.origin + '/settings?error=Failed to get Spotify user profile'
+      );
+    }
+    
+    const userProfile = await userProfileResponse.json();
+    const spotifyUserId = userProfile.id;
+    
+    // Check if this Spotify account is in cooling period
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    );
+    
+    const now = new Date().toISOString();
+    const { data: coolingPeriodData, error: coolingPeriodError } = await adminClient
+      .from('deleted_accounts')
+      .select('cooling_period_end')
+      .eq('spotify_user_id', spotifyUserId)
+      .gt('cooling_period_end', now)
+      .maybeSingle();
+    
+    if (coolingPeriodError) {
+      console.error('Error checking cooling period:', coolingPeriodError);
+      return NextResponse.redirect(
+        requestUrl.origin + '/settings?error=Error checking account status'
+      );
+    }
+    
+    // If the account is in cooling period, redirect with error
+    if (coolingPeriodData) {
+      const coolingEndDate = new Date(coolingPeriodData.cooling_period_end);
+      const daysRemaining = Math.ceil((coolingEndDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      
+      return NextResponse.redirect(
+        requestUrl.origin + '/settings?error=' + encodeURIComponent(
+          `This Spotify account was recently associated with a deleted Diggr account and cannot be connected for ${daysRemaining} more days.`
+        )
+      );
+    }
+    
     // Create a Supabase client to update the user's profile
     const cookieStore = cookies();
     const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore });
@@ -132,6 +183,7 @@ export async function GET(request: NextRequest) {
       .update({
         spotify_connected: true,
         spotify_refresh_token: tokens.refresh_token,
+        spotify_user_id: spotifyUserId,
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id);
