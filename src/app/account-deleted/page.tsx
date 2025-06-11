@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-export default function AccountDeletedPage() {
+// Componente que usa useSearchParams envuelto en Suspense
+function AccountDeletedContent() {
   // Cooling period in days
   const DEFAULT_COOLING_PERIOD_DAYS = 30;
   const [daysRemaining, setDaysRemaining] = useState(DEFAULT_COOLING_PERIOD_DAYS);
@@ -93,6 +94,106 @@ export default function AccountDeletedPage() {
   };
 
   return (
+    <motion.div 
+      className="relative"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-red-500/30 via-purple-500/20 to-red-500/30 opacity-70 blur-lg"></div>
+      <motion.div 
+        className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-md border border-white/5 p-8 rounded-2xl"
+        whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}
+        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+      >
+        <div className="text-center">
+          <div className="mb-6">
+            <div className="w-20 h-20 bg-black/40 rounded-full flex items-center justify-center mx-auto">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-red-500">
+                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M15 9L9 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 9L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          
+          <h1 className="text-2xl font-bold mb-2 text-white">Account Deleted</h1>
+          
+          {message ? (
+            <p className="text-[#A3A3A3] mb-6">{message}</p>
+          ) : (
+            <p className="text-[#A3A3A3] mb-6">
+              Your account has been marked for deletion and will be permanently removed after {daysRemaining} days.
+            </p>
+          )}
+          
+          <div className="bg-black/40 backdrop-blur-md p-4 rounded-xl mb-6 text-left border border-white/5">
+            <h2 className="text-lg font-medium mb-2 text-white">Important Information</h2>
+            <ul className="list-disc list-inside space-y-2 text-[#A3A3A3]">
+              <li>You've been signed out of your account</li>
+              <li>You won't be able to register again with the same email for {daysRemaining} days</li>
+              <li>You won't be able to connect the same Spotify account for {daysRemaining} days</li>
+              <li>Your playlists will remain in your Spotify account</li>
+            </ul>
+          </div>
+          
+          <button 
+            onClick={handleNavigateHome}
+            disabled={isSigningOut}
+            className={`inline-block ${isSigningOut ? 'bg-gray-500' : 'bg-[#1DB954] hover:opacity-90'} text-white font-medium py-3 px-6 rounded-xl transition-colors active:scale-95 relative`}
+          >
+            {isSigningOut ? (
+              <>
+                <span className="opacity-0">Return to Homepage</span>
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </span>
+              </>
+            ) : (
+              'Return to Homepage'
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Componente de carga para mostrar mientras se suspende
+function AccountDeletedSkeleton() {
+  return (
+    <div className="relative animate-pulse">
+      <div className="absolute -inset-1 rounded-3xl bg-gray-700/30 opacity-70 blur-lg"></div>
+      <div className="relative bg-[#181818]/80 border border-white/5 p-8 rounded-2xl">
+        <div className="text-center">
+          <div className="mb-6">
+            <div className="w-20 h-20 bg-black/40 rounded-full mx-auto"></div>
+          </div>
+          
+          <div className="h-7 bg-gray-700 rounded-md mb-2 mx-auto w-48"></div>
+          <div className="h-4 bg-gray-700 rounded-md mb-6 mx-auto w-64"></div>
+          
+          <div className="bg-black/40 p-4 rounded-xl mb-6 border border-white/5">
+            <div className="h-6 bg-gray-700 rounded-md mb-2 w-40"></div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-700 rounded-md w-full"></div>
+              <div className="h-4 bg-gray-700 rounded-md w-full"></div>
+              <div className="h-4 bg-gray-700 rounded-md w-full"></div>
+            </div>
+          </div>
+          
+          <div className="h-12 bg-gray-700 rounded-xl mx-auto w-48"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AccountDeletedPage() {
+  return (
     <div className="min-h-screen bg-black overflow-hidden">
       {/* Animated background */}
       <div className="fixed inset-0 -z-10">
@@ -129,71 +230,9 @@ export default function AccountDeletedPage() {
       </motion.header>
       
       <div className="max-w-2xl mx-auto px-4 py-12">
-        <motion.div 
-          className="relative"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-red-500/30 via-purple-500/20 to-red-500/30 opacity-70 blur-lg"></div>
-          <motion.div 
-            className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-md border border-white/5 p-8 rounded-2xl"
-            whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          >
-            <div className="text-center">
-              <div className="mb-6">
-                <div className="w-20 h-20 bg-black/40 rounded-full flex items-center justify-center mx-auto">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-red-500">
-                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M15 9L9 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M9 9L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              </div>
-              
-              <h1 className="text-2xl font-bold mb-2 text-white">Account Deleted</h1>
-              
-              {message ? (
-                <p className="text-[#A3A3A3] mb-6">{message}</p>
-              ) : (
-                <p className="text-[#A3A3A3] mb-6">
-                  Your account has been marked for deletion and will be permanently removed after {daysRemaining} days.
-                </p>
-              )}
-              
-              <div className="bg-black/40 backdrop-blur-md p-4 rounded-xl mb-6 text-left border border-white/5">
-                <h2 className="text-lg font-medium mb-2 text-white">Important Information</h2>
-                <ul className="list-disc list-inside space-y-2 text-[#A3A3A3]">
-                  <li>You've been signed out of your account</li>
-                  <li>You won't be able to register again with the same email for {daysRemaining} days</li>
-                  <li>You won't be able to connect the same Spotify account for {daysRemaining} days</li>
-                  <li>Your playlists will remain in your Spotify account</li>
-                </ul>
-              </div>
-              
-              <button 
-                onClick={handleNavigateHome}
-                disabled={isSigningOut}
-                className={`inline-block ${isSigningOut ? 'bg-gray-500' : 'bg-[#1DB954] hover:opacity-90'} text-white font-medium py-3 px-6 rounded-xl transition-colors active:scale-95 relative`}
-              >
-                {isSigningOut ? (
-                  <>
-                    <span className="opacity-0">Return to Homepage</span>
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    </span>
-                  </>
-                ) : (
-                  'Return to Homepage'
-                )}
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
+        <Suspense fallback={<AccountDeletedSkeleton />}>
+          <AccountDeletedContent />
+        </Suspense>
       </div>
     </div>
   );

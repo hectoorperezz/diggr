@@ -1,8 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { RegisterForm } from '@/components/auth/RegisterForm';
+
+// Fallback component to show while loading
+function RegisterFormSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-12 bg-gray-800 rounded-md"></div>
+      <div className="h-12 bg-gray-800 rounded-md"></div>
+      <div className="h-12 bg-gray-800 rounded-md"></div>
+      <div className="h-12 bg-gray-800 rounded-md"></div>
+      <div className="h-12 bg-gray-700 rounded-md"></div>
+    </div>
+  );
+}
 
 export default function RegisterPage() {
   return (
@@ -21,7 +34,9 @@ export default function RegisterPage() {
             <h3 className="text-xl font-semibold text-center">Sign Up</h3>
           </div>
           <div>
-            <RegisterForm />
+            <Suspense fallback={<RegisterFormSkeleton />}>
+              <RegisterForm />
+            </Suspense>
           </div>
         </div>
       </div>
