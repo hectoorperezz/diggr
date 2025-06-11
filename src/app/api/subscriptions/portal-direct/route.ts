@@ -19,9 +19,13 @@ export async function POST(request: NextRequest) {
     
     console.log('[PORTAL-DIRECT] User authenticated:', session.user.id);
 
+    // Extraer la URL base de la solicitud
+    const requestUrl = new URL(request.url);
+    const origin = requestUrl.origin;
+
     // Parse form data
     const formData = await request.formData();
-    const returnUrl = formData.get('returnUrl') as string || `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/settings`;
+    const returnUrl = formData.get('returnUrl') as string || `${origin}/settings`;
     
     console.log('[PORTAL-DIRECT] Return URL:', returnUrl);
     

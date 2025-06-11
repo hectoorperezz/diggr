@@ -23,6 +23,10 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     const userEmail = session.user.email;
 
+    // Extraer la URL base de la solicitud
+    const requestUrl = new URL(request.url);
+    const origin = requestUrl.origin;
+
     // 1. Verificar si la cuenta está marcada como eliminada en la tabla users
     const { data: userData, error: userError } = await adminClient
       .from('users')
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
         daysRemaining = Math.ceil((coolingEndDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
         
         // Crear URL con parámetros
-        const url = new URL('/account-deleted', 'http://localhost');
+        const url = new URL('/account-deleted', origin);
         url.searchParams.set('until', encodeURIComponent(deletedData.cooling_period_end));
         url.searchParams.set('message', encodeURIComponent(
           `This account has been deleted. You won't be able to use this email for ${daysRemaining} days.`

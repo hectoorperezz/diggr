@@ -54,7 +54,7 @@ export default function TestAuthProvidersPage() {
             const googleResult = await supabase.auth.signInWithOAuth({
               provider: 'google',
               options: {
-                redirectTo: 'http://localhost:3000/auth/callback',
+                redirectTo: `${window.location.origin}/auth/callback`,
                 skipBrowserRedirect: true
               }
             });
@@ -85,7 +85,7 @@ export default function TestAuthProvidersPage() {
             const spotifyResult = await supabase.auth.signInWithOAuth({
               provider: 'spotify',
               options: {
-                redirectTo: 'http://localhost:3000/auth/callback',
+                redirectTo: `${window.location.origin}/auth/callback`,
                 skipBrowserRedirect: true
               }
             });
