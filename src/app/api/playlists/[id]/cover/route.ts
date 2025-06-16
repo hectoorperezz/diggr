@@ -5,10 +5,10 @@ import { refreshAccessToken, uploadPlaylistCover, getPlaylist } from '@/lib/spot
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const id = params.id;
+    const { id } = context.params;
     
     if (!id) {
       return NextResponse.json({ error: 'Missing playlist ID' }, { status: 400 });
