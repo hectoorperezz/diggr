@@ -4,10 +4,10 @@ import { cookies } from 'next/headers';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: any
 ) {
   try {
-    const id = params.id;
+    const { id } = context.params;
     
     if (!id) {
       return NextResponse.json({ error: 'Missing playlist ID' }, { status: 400 });
