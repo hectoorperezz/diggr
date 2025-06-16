@@ -1,12 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  swcMinify: true,
   reactStrictMode: false,
+  trailingSlash: false,
   experimental: {
     optimizeCss: true,
-    turbo: { 
-      rules: { "*.js": ["jsx"] }
-    },
     scrollRestoration: true,
   },
   compiler: {

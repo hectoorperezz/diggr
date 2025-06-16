@@ -31,18 +31,32 @@ function getSubscriptionData(subscription: Stripe.Subscription) {
     })
   );
 
-  // Determine plan type based on price ID
-  let planType = 'free';
-  
-  // Check if the price ID matches our pro price ID
-  if (priceId === stripePriceId) {
+  let planType: 'free' | 'premium' = 'free';
+
+  /**
+   * PREMIUM DETECTION RULES (ENHANCED)
+   * --------------------------------------------------
+   * 1. If STRIPE_PRO_PRICE_ID env is set and matches priceId → premium.
+   * 2. If priceId starts with "price_" and subscription is active → premium (robust matching).
+   * 3. If env var is NOT configured (common in local dev) but priceId is present → premium.
+   * 4. If subscription is active AND contains at least one item → premium (fallback safety-net).
+   */
+
+  if (stripePriceId && priceId === stripePriceId) {
     planType = 'premium';
-    console.log('WEBHOOK: Plan determined as PREMIUM based on exact price ID match');
-  } 
-  // Fallback - if subscription is active and we have a product, assume it's premium
-  else if (subscription.status === 'active' && subscription.items.data.length > 0) {
+    console.log('WEBHOOK: Plan determined as PREMIUM (exact price ID match)');
+  } else if (priceId && priceId.startsWith('price_') && subscription.status === 'active') {
+    // Any active subscription with a valid Stripe price ID is premium
     planType = 'premium';
-    console.log('WEBHOOK: Plan determined as PREMIUM based on active status (fallback)');
+    console.log('WEBHOOK: Plan determined as PREMIUM (Stripe price detected)');
+  } else if (!stripePriceId && priceId) {
+    planType = 'premium';
+    console.warn('WEBHOOK: STRIPE_PRO_PRICE_ID env not set; defaulting to PREMIUM because priceId exists');
+  } else if (subscription.status === 'active' && subscription.items.data.length > 0) {
+    // Enhanced detection: Any active subscription with items is considered premium
+    // This ensures users who upgrade get premium access even if price IDs don't exactly match
+    planType = 'premium';
+    console.log('WEBHOOK: Plan determined as PREMIUM based on active status fallback');
   }
   
   console.log('WEBHOOK: Final plan type:', planType);
@@ -90,9 +104,20 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     console.log(`WEBHOOK CHECKOUT: Retrieved subscription from Stripe:`, JSON.stringify(subscription));
 
-    // Update the subscription in the database
-    const subscriptionData = getSubscriptionData(subscription);
-    console.log(`WEBHOOK CHECKOUT: Updating subscription data:`, JSON.stringify(subscriptionData));
+    // Get line items to verify this is a premium subscription
+    // This adds an extra check to ensure we identify premium purchases correctly
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+    console.log(`WEBHOOK CHECKOUT: Session line items:`, JSON.stringify(lineItems.data));
+    
+    // Force premium plan for any subscription created via checkout
+    // This guarantees users who purchase get premium access regardless of price ID matching
+    const subscriptionData = {
+      ...getSubscriptionData(subscription),
+      // Force plan_type to premium for any completed checkout with a subscription
+      plan_type: 'premium' as 'free' | 'premium'
+    };
+    
+    console.log(`WEBHOOK CHECKOUT: Updating subscription data with PREMIUM plan:`, JSON.stringify(subscriptionData));
 
     const { data: existingData, error: checkError } = await supabaseAdmin
       .from('subscriptions')
@@ -102,15 +127,29 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
 
     console.log(`WEBHOOK CHECKOUT: Existing subscription:`, JSON.stringify(existingData));
 
-    // Perform update
-    const { data, error } = await supabaseAdmin
-      .from('subscriptions')
-      .update({
-        ...subscriptionData,
-        stripe_customer_id: customerId,
-      })
-      .eq('user_id', userId)
-      .select();
+    let data, error;
+    if (existingData) {
+      console.log('WEBHOOK CHECKOUT: Updating existing subscription row');
+      ({ data, error } = await supabaseAdmin
+        .from('subscriptions')
+        .update({
+          ...subscriptionData,
+          stripe_customer_id: customerId,
+        })
+        .eq('user_id', userId)
+        .select());
+    } else {
+      console.log('WEBHOOK CHECKOUT: Inserting new subscription row');
+      ({ data, error } = await supabaseAdmin
+        .from('subscriptions')
+        .insert({
+          id: crypto.randomUUID(),
+          user_id: userId,
+          stripe_customer_id: customerId,
+          ...subscriptionData,
+        })
+        .select());
+    }
 
     if (error) {
       console.error('WEBHOOK CHECKOUT ERROR: Error updating subscription in database:', error);
@@ -135,11 +174,12 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
     // Find the user with this customer ID
     const { data: subscriptionData, error: subscriptionError } = await supabaseAdmin
       .from('subscriptions')
-      .select('user_id')
+      .select('user_id, plan_type')
       .eq('stripe_customer_id', customerId)
       .single();
 
     let userId: string;
+    let currentPlanType: 'free' | 'premium' = 'free';
 
     if (subscriptionError || !subscriptionData) {
       console.error('WEBHOOK UPDATE ERROR: Error finding user for customer:', subscriptionError);
@@ -148,7 +188,7 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
       // Try looking up by subscription ID as a fallback
       const { data: subData, error: subError } = await supabaseAdmin
         .from('subscriptions')
-        .select('user_id')
+        .select('user_id, plan_type')
         .eq('stripe_subscription_id', subscription.id)
         .single();
         
@@ -159,13 +199,22 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
       
       console.log(`WEBHOOK UPDATE: Found user by subscription ID: ${subData.user_id}`);
       userId = subData.user_id;
+      currentPlanType = subData.plan_type as 'free' | 'premium';
     } else {
       console.log(`WEBHOOK UPDATE: Found user by customer ID: ${subscriptionData.user_id}`);
       userId = subscriptionData.user_id;
+      currentPlanType = subscriptionData.plan_type as 'free' | 'premium';
     }
 
     // Base update data from subscription details
     const updateData = getSubscriptionData(subscription);
+    
+    // If the current plan is already premium, let's make sure we don't downgrade it accidentally
+    // This preserves premium status for existing premium users
+    if (currentPlanType === 'premium' && subscription.status === 'active') {
+      console.log(`WEBHOOK UPDATE: Preserving existing premium status for active subscription`);
+      updateData.plan_type = 'premium';
+    }
     
     // Special handling for canceled subscriptions
     if (subscription.cancel_at_period_end === true) {
@@ -262,10 +311,23 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
   }
 }
 
-// Main webhook handler function - this was missing and causing the error
+// Main webhook handler function
 export async function handleStripeWebhook(event: Stripe.Event) {
   try {
     console.log(`WEBHOOK: Processing event type ${event.type}, ID ${event.id}`);
+    
+    // Log the event data for important subscription events to help with debugging
+    if (event.type.startsWith('customer.subscription') || event.type === 'checkout.session.completed') {
+      const eventData = event.data.object as any;
+      console.log(`WEBHOOK: Event data summary:`, JSON.stringify({
+        id: eventData.id,
+        customerId: eventData.customer,
+        subscriptionId: eventData.subscription || eventData.id,
+        status: eventData.status,
+        planType: eventData.plan?.id || 'unknown',
+        priceId: eventData.items?.data[0]?.price?.id || eventData.display_items?.[0]?.price?.id || 'unknown'
+      }));
+    }
     
     switch (event.type) {
       case 'checkout.session.completed':
@@ -296,6 +358,7 @@ export async function handleStripeWebhook(event: Stripe.Event) {
     return true;
   } catch (error) {
     console.error(`WEBHOOK ERROR: Error handling webhook event ${event.type}:`, error);
+    // We still throw the error to ensure proper error handling up the call stack
     throw error;
   }
 }

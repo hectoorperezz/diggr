@@ -104,7 +104,7 @@ export default function SettingsPage() {
     // Function to fetch subscription data
     const fetchSubscriptionData = async () => {
       try {
-        const response = await fetch('/api/user/subscription-data', {
+        const response = await fetch('/api/user/subscription', {
           method: 'GET',
           headers: {
             'Cache-Control': 'no-cache'

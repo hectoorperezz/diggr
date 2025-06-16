@@ -25,10 +25,12 @@ export default function DashboardPage() {
   const [localLoading, setLocalLoading] = useState(true);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Set isClient to true when component mounts on client
   useEffect(() => {
     setIsClient(true);
+    setMounted(true);
     
     // Set a maximum time for loading
     const timeoutId = setTimeout(() => {
@@ -56,6 +58,7 @@ export default function DashboardPage() {
       userEmail: user?.email,
       hasProfile: !!userProfile,
       localLoading,
+      mounted,
     });
 
     // Only proceed with auth checks if loading is complete
@@ -166,6 +169,32 @@ export default function DashboardPage() {
       setIsRetrying(false);
     }
   };
+
+  // Don't render anything until mounted on client
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-[#121212]"></div>
+          <div className="absolute top-0 -left-40 w-96 h-96 bg-gradient-to-br from-purple-500/20 via-[#1DB954]/20 to-transparent rounded-full filter blur-3xl opacity-50 animate-blob"></div>
+          <div className="absolute top-0 -right-40 w-96 h-96 bg-gradient-to-br from-[#1DB954]/20 via-purple-500/20 to-transparent rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
+        </div>
+        
+        <motion.div 
+          className="flex flex-col items-center space-y-4"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <svg className="animate-spin h-12 w-12 text-[#1DB954]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="text-xl font-medium">Loading your dashboard...</p>
+        </motion.div>
+      </div>
+    );
+  }
 
   // Show loading state
   if ((isLoading || localLoading) && !hasCheckedAuth) {

@@ -31,7 +31,8 @@ export async function middleware(req: NextRequest) {
                           req.nextUrl.pathname.startsWith('/playlists');
 
   // Allow access to the /auth/callback route regardless of auth status
-  if (req.nextUrl.pathname.startsWith('/auth/callback')) {
+  if (req.nextUrl.pathname.startsWith('/auth/callback') || 
+      req.nextUrl.pathname.startsWith('/auth/verify')) {
     return res;
   }
 
@@ -48,6 +49,27 @@ export async function middleware(req: NextRequest) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = '/dashboard';
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // Early check: if Supabase returned an email-verification error from any provider
+  const errorCodeParam = req.nextUrl.searchParams.get('error_code');
+  const errorDescriptionParam = req.nextUrl.searchParams.get('error_description');
+  if (errorCodeParam === 'provider_email_needs_verification' ||
+      (errorDescriptionParam && errorDescriptionParam.toLowerCase().includes('unverified email'))) {
+    // Try to extract email from description
+    let emailFromDesc = '';
+    if (errorDescriptionParam && errorDescriptionParam.includes('@')) {
+      const match = errorDescriptionParam.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/);
+      if (match && match[0]) emailFromDesc = match[0];
+    }
+    const verifyUrl = req.nextUrl.clone();
+    verifyUrl.pathname = '/auth/verify';
+    verifyUrl.searchParams.delete('error');
+    verifyUrl.searchParams.delete('error_code');
+    verifyUrl.searchParams.delete('error_description');
+    verifyUrl.searchParams.set('provider', 'spotify');
+    if (emailFromDesc) verifyUrl.searchParams.set('email', emailFromDesc);
+    return NextResponse.redirect(verifyUrl);
   }
 
   try {
@@ -128,6 +150,7 @@ export const config = {
     // Match authentication routes
     '/auth/login',
     '/auth/register',
+    '/auth/verify',
     // Match callback route
     '/auth/callback',
     // Match all request paths except for the ones starting with:

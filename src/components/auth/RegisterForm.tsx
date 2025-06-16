@@ -104,8 +104,8 @@ export function RegisterForm() {
         return;
       }
       
-      setSuccessMessage('Check your email for the confirmation link!');
-      setError(null);
+      // Redirect to verification page with email and provider
+      router.push(`/auth/verify?email=${encodeURIComponent(email)}&provider=email`);
     } catch (error: any) {
       setError(error.message || 'An error occurred during registration');
     } finally {

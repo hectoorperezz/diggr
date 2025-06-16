@@ -10,11 +10,15 @@ export async function GET(request: Request) {
   const error_description = requestUrl.searchParams.get('error_description');
   const error_code = requestUrl.searchParams.get('error_code');
   const debug_attempt = requestUrl.searchParams.get('debug_attempt');
+  const provider = requestUrl.searchParams.get('provider');
   
   // Enhanced logging for debugging purposes
   console.log('Auth callback requested:', {
     hasCode: !!code,
     hasError: !!error,
+    provider: provider || 'unknown',
+    error_code: error_code || 'none',
+    error_description: error_description ? error_description.substring(0, 50) + '...' : 'none',
     debug_attempt: debug_attempt || false,
     url: requestUrl.toString().substring(0, 100) + '...'
   });
@@ -25,6 +29,7 @@ export async function GET(request: Request) {
       error,
       error_description, 
       error_code,
+      provider,
       url: requestUrl.toString()
     });
     
@@ -35,35 +40,44 @@ export async function GET(request: Request) {
         code: error_code,
         // Include additional context that might help diagnose the issue
         timestamp: new Date().toISOString(),
-        auth_provider: requestUrl.searchParams.get('provider') || 'unknown'
+        auth_provider: provider || requestUrl.searchParams.get('provider') || 'unknown'
       });
-      
-      // Try to check Supabase status for extra diagnostics
-      try {
-        const statusResponse = await fetch('https://status.supabase.com/api/v2/status.json', { 
-          cache: 'no-store'
-        });
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          console.log('Supabase service status:', statusData);
-        }
-      } catch (statusError) {
-        console.error('Failed to check Supabase status:', statusError);
-      }
     }
     
-    // Special handling for email verification errors
-    if (error_code === 'provider_email_needs_verification' || 
-        error_description?.includes('Unverified email with spotify')) {
-      let customMessage = 'Se ha enviado un correo de confirmación a tu email de Spotify. Por favor verifica tu email para continuar.';
+    // Special handling for email verification errors - both Spotify and regular email
+    const isSpotifyVerificationError = 
+      error_code === 'provider_email_needs_verification' || 
+      (error_description && error_description.includes('Unverified email')) ||
+      (error === 'access_denied' && error_description && 
+       (error_description.includes('spotify') || error_description.includes('verification')));
+    
+    if (isSpotifyVerificationError) {
+      console.log('Email verification required, redirecting to verify page', {
+        isSpotify: error_description?.includes('spotify') || false,
+        provider: provider || 'unknown',
+        error_code
+      });
       
-      // Redirect to login with friendly message using info parameter instead of error
+      // Extract email from error description if available
+      let userEmail = '';
+      if (error_description && error_description.includes('@')) {
+        const emailMatch = error_description.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/);
+        if (emailMatch && emailMatch[0]) {
+          userEmail = emailMatch[0];
+        }
+      }
+      
+      // Determine the provider (spotify or email)
+      const authProvider = error_description?.includes('spotify') ? 'spotify' : 
+                           provider || 'email';
+      
+      // Redirect to verify page with provider info
       return NextResponse.redirect(
-        `${requestUrl.origin}/auth/login?info=${encodeURIComponent(customMessage)}`
+        `${requestUrl.origin}/auth/verify?provider=${authProvider}${userEmail ? `&email=${encodeURIComponent(userEmail)}` : ''}`
       );
     }
     
-    // Redirect to login with error message
+    // Redirect to login with error message for other errors
     return NextResponse.redirect(
       `${requestUrl.origin}/auth/login?error=${encodeURIComponent(error_description || error)}`
     );
@@ -97,6 +111,24 @@ export async function GET(request: Request) {
           code: error.status,
           fullError: JSON.stringify(error)
         });
+      }
+      
+      // If there's a verification error in the message, redirect to verify
+      if (error.message?.includes('verification') || error.message?.includes('verify')) {
+        console.log('Verification error in session exchange, redirecting to verify page');
+        
+        // Try to extract email from error message
+        let userEmail = '';
+        if (error.message.includes('@')) {
+          const emailMatch = error.message.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/);
+          if (emailMatch && emailMatch[0]) {
+            userEmail = emailMatch[0];
+          }
+        }
+        
+        return NextResponse.redirect(
+          `${requestUrl.origin}/auth/verify?provider=${provider || 'email'}${userEmail ? `&email=${encodeURIComponent(userEmail)}` : ''}`
+        );
       }
       
       throw error;

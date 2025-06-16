@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
@@ -12,6 +14,8 @@ export default function Home() {
   const isHeroInView = useInView(heroRef, { once: false });
   const { session, isLoading } = useSupabase();
   const [isClient, setIsClient] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
   
   // Set isClient to true when component mounts on client
   useEffect(() => {

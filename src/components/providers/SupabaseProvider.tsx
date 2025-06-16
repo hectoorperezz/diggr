@@ -533,7 +533,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         options: {
-          // For development only - disable email confirmation
+          // Set email redirect to go through the callback handler
           emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             email: email
@@ -640,7 +640,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'spotify',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?provider=spotify`,
           scopes: 'user-read-email playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative user-read-private'
         }
       });
