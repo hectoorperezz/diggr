@@ -1,38 +1,44 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
 
-export default function VerifyPage() {
+function VerifyParamsClient({
+  onParams
+}: {
+  onParams: (email: string, provider: string, searchParams: URLSearchParams) => void
+}) {
+  'use client';
+  const { useSearchParams } = require('next/navigation');
   const searchParams = useSearchParams();
+  useEffect(() => {
+    const emailParam = searchParams?.get('email') || '';
+    const providerParam = searchParams?.get('provider') || 'email';
+    onParams(emailParam, providerParam, searchParams);
+  }, [searchParams, onParams]);
+  return null;
+}
+
+export default function VerifyPage() {
   const router = useRouter();
   const [email, setEmail] = useState<string>('');
   const [provider, setProvider] = useState<string>('');
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  
+  const [searchParamsObj, setSearchParamsObj] = useState<URLSearchParams | null>(null);
+
   useEffect(() => {
-    // Get email and provider from URL params
-    const emailParam = searchParams?.get('email');
-    const providerParam = searchParams?.get('provider') || 'email';
-    
-    if (emailParam) {
-      setEmail(emailParam);
+    if (searchParamsObj) {
+      // Log for debugging
+      console.log('Verify page params:', {
+        email,
+        provider,
+        searchParams: Object.fromEntries(searchParamsObj.entries())
+      });
     }
-    
-    // Log for debugging
-    console.log('Verify page params:', { 
-      email: emailParam, 
-      provider: providerParam,
-      searchParams: Object.fromEntries(searchParams?.entries() || [])
-    });
-    
-    setProvider(providerParam);
-  }, [searchParams]);
-  
+  }, [email, provider, searchParamsObj]);
+
   // Countdown timer for resend button
   useEffect(() => {
     if (countdown > 0) {
@@ -40,15 +46,12 @@ export default function VerifyPage() {
       return () => clearTimeout(timer);
     }
   }, [countdown]);
-  
+
   const handleResendEmail = async () => {
     if (!email || countdown > 0) return;
-    
     setIsResendingEmail(true);
-    
     try {
       const supabase = createClient();
-      
       let result;
       if (provider === 'spotify') {
         // For Spotify, we'll re-initiate the OAuth flow
@@ -69,11 +72,9 @@ export default function VerifyPage() {
           }
         });
       }
-      
       if (result.error) {
         throw result.error;
       }
-      
       toast.success('Verification email sent! Please check your inbox');
       setCountdown(60); // Set cooldown timer for 60 seconds
     } catch (error: any) {
@@ -83,25 +84,31 @@ export default function VerifyPage() {
       setIsResendingEmail(false);
     }
   };
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-black">
+      <Suspense fallback={null}>
+        <VerifyParamsClient
+          onParams={(emailParam, providerParam, paramsObj) => {
+            setEmail(emailParam);
+            setProvider(providerParam);
+            setSearchParamsObj(paramsObj);
+          }}
+        />
+      </Suspense>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
             <img src="/images/diggr.png" alt="Diggr" className="h-16 mx-auto" />
           </Link>
         </div>
-        
         <div className="bg-[#181818] rounded-2xl shadow-md p-8 border border-white/10 text-center">
           <div className="w-16 h-16 bg-[#1DB954]/20 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#1DB954]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          
           <h1 className="text-2xl font-bold mb-4">Check your email</h1>
-          
           {provider === 'spotify' ? (
             <>
               <div className="flex items-center justify-center mb-6">
@@ -123,7 +130,6 @@ export default function VerifyPage() {
               Please check your inbox and click the link to verify your account.
             </p>
           )}
-          
           <div className="mb-8">
             <button
               onClick={handleResendEmail}
@@ -134,7 +140,6 @@ export default function VerifyPage() {
                countdown > 0 ? `Resend in ${countdown}s` : 'Resend verification email'}
             </button>
           </div>
-          
           <div className="pt-6 border-t border-white/10">
             <p className="text-sm text-[#A3A3A3] mb-4">
               Already verified? 
@@ -144,7 +149,6 @@ export default function VerifyPage() {
             </Link>
           </div>
         </div>
-        
         <div className="mt-6 text-center">
           <Link href="/" className="text-[#A3A3A3] hover:text-white transition-colors">
             ← Back to home
