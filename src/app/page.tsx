@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import ClientSearchParams from './ClientSearchParams';
 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
@@ -14,7 +15,6 @@ export default function Home() {
   const isHeroInView = useInView(heroRef, { once: false });
   const { session, isLoading } = useSupabase();
   const [isClient, setIsClient] = useState(false);
-  const searchParams = useSearchParams();
   const router = useRouter();
   
   // Set isClient to true when component mounts on client
@@ -162,6 +162,11 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+
+      {/* Move useSearchParams logic to a client component wrapped in Suspense */}
+      <Suspense fallback={null}>
+        <ClientSearchParams />
+      </Suspense>
 
       {/* Demo Generator Card */}
       <section className="py-16 px-4 sm:px-8 w-full max-w-7xl mx-auto">
