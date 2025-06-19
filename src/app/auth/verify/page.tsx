@@ -1,8 +1,13 @@
+// This file uses React hooks and must be a client component
+"use client";
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
+
+// Dynamic import to use useSearchParams only on client
+const { useSearchParams } = require('next/navigation');
 
 function VerifyParamsClient({
   onParams
@@ -10,7 +15,6 @@ function VerifyParamsClient({
   onParams: (email: string, provider: string, searchParams: URLSearchParams) => void
 }) {
   'use client';
-  const { useSearchParams } = require('next/navigation');
   const searchParams = useSearchParams();
   useEffect(() => {
     const emailParam = searchParams?.get('email') || '';
