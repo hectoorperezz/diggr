@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
@@ -10,7 +10,8 @@ import {
   EraSelection,
   RegionSelection,
   PlaylistDetails,
-  Review
+  Review,
+  UserPrompt
 } from '@/components/playlist-wizard';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
@@ -30,7 +31,7 @@ type UserProfileWithPlan = {
 };
 
 // Define the wizard steps
-type WizardStep = 'genre' | 'mood' | 'era' | 'region' | 'details' | 'review';
+type WizardStep = 'genre' | 'mood' | 'era' | 'region' | 'details' | 'review' | 'prompt';
 
 // Define the form data structure
 export interface PlaylistFormData {
@@ -48,13 +49,15 @@ export interface PlaylistFormData {
   regions: string[];
   languages: string[];
   
+  // User prompt
+  userPrompt: string;
+  
   // Playlist details
   playlistName: string;
   description: string;
   trackCount: number;
   isPublic: boolean;
   uniquenessLevel: number; // 1-5 scale (mainstream to deep cuts)
-  coverImage?: string; // Base64 encoded image data
 }
 
 export default function CreatePlaylistPage() {
@@ -78,12 +81,12 @@ export default function CreatePlaylistPage() {
     eras: [],
     regions: [],
     languages: [],
+    userPrompt: '',
     playlistName: '',
     description: '',
     trackCount: 25,
     isPublic: true,
-    uniquenessLevel: 3,
-    coverImage: undefined
+    uniquenessLevel: 3
   });
   
   // Update form data
@@ -96,37 +99,82 @@ export default function CreatePlaylistPage() {
   
   // Handle navigation
   const nextStep = () => {
-    if (currentStep === 'genre') setCurrentStep('mood');
-    else if (currentStep === 'mood') setCurrentStep('era');
+    if (currentStep === 'genre') setCurrentStep('era');
     else if (currentStep === 'era') setCurrentStep('region');
-    else if (currentStep === 'region') setCurrentStep('details');
+    else if (currentStep === 'region') setCurrentStep('mood');
+    else if (currentStep === 'mood') setCurrentStep('prompt');
+    else if (currentStep === 'prompt') setCurrentStep('details');
     else if (currentStep === 'details') setCurrentStep('review');
     
     window.scrollTo(0, 0);
   };
   
   const prevStep = () => {
-    if (currentStep === 'mood') setCurrentStep('genre');
-    else if (currentStep === 'era') setCurrentStep('mood');
+    if (currentStep === 'era') setCurrentStep('genre');
     else if (currentStep === 'region') setCurrentStep('era');
-    else if (currentStep === 'details') setCurrentStep('region');
+    else if (currentStep === 'mood') setCurrentStep('region');
+    else if (currentStep === 'prompt') setCurrentStep('mood');
+    else if (currentStep === 'details') setCurrentStep('prompt');
     else if (currentStep === 'review') setCurrentStep('details');
     
     window.scrollTo(0, 0);
   };
   
   // Calculate progress percentage
-  const progressSteps: WizardStep[] = ['genre', 'mood', 'era', 'region', 'details', 'review'];
+  const progressSteps: WizardStep[] = ['genre', 'era', 'region', 'mood', 'prompt', 'details', 'review'];
   const currentStepIndex = progressSteps.indexOf(currentStep);
   const progressPercentage = ((currentStepIndex) / (progressSteps.length - 1)) * 100;
+
+  // Handle direct step navigation with validation
+  const handleStepChange = (step: WizardStep) => {
+    // Always allow navigation to any step
+    setCurrentStep(step);
+    
+    // Scroll to top when changing steps
+    window.scrollTo(0, 0);
+  };
 
   // Define creation process states
   const [creationStep, setCreationStep] = useState<string>('idle');
   const [creationProgress, setCreationProgress] = useState(0);
-  const [adComplete, setAdComplete] = useState(false);
   const [playlistId, setPlaylistId] = useState<string | null>(null);
 
-  // Handle form submission with improved UI feedback and ad integration
+  // Function to simulate natural progress increments
+  const simulateNaturalProgress = useCallback(() => {
+    // Start with smaller increments that get larger as we go
+    const progressIntervals = [
+      { target: 10, delay: 2000, step: 1 },   // 0-10%: Very slow start
+      { target: 25, delay: 3000, step: 1 },   // 10-25%: Still slow
+      { target: 45, delay: 3500, step: 2 },   // 25-45%: Medium steps
+      { target: 65, delay: 4000, step: 2 },   // 45-65%: Medium steps
+      { target: 80, delay: 4500, step: 1 },   // 65-80%: Slowing down
+      { target: 90, delay: 5000, step: 0.5 }  // 80-90%: Very slow at the end
+    ];
+    
+    let currentProgress = 0;
+    
+    // Process each interval
+    const processInterval = (intervalIndex: number) => {
+      if (intervalIndex >= progressIntervals.length) return;
+      
+      const interval = progressIntervals[intervalIndex];
+      const timer = setInterval(() => {
+        if (currentProgress >= interval.target) {
+          clearInterval(timer);
+          processInterval(intervalIndex + 1);
+          return;
+        }
+        
+        currentProgress += interval.step;
+        setCreationProgress(currentProgress);
+      }, interval.delay / (interval.target / interval.step));
+    };
+    
+    // Start the progress simulation
+    processInterval(0);
+  }, []);
+
+  // Handle form submission with improved UI feedback
   const handleSubmit = async () => {
     if (!session?.user) {
       router.push('/auth?returnTo=/create-playlist');
@@ -134,6 +182,7 @@ export default function CreatePlaylistPage() {
     }
     
     setIsLoading(true);
+    simulateNaturalProgress(); // Start the natural progress simulation
     
     try {
       // Check if user can create more playlists based on subscription
@@ -152,12 +201,8 @@ export default function CreatePlaylistPage() {
       }
       
       setCreationStep('generating');
-      setCreationProgress(10);
       
       // Step 1: Generate recommendations with OpenAI
-      setCreationStep('generating');
-      setCreationProgress(20);
-      
       const generateResponse = await fetch('/api/playlists/generate', {
         method: 'POST',
         headers: {
@@ -165,8 +210,6 @@ export default function CreatePlaylistPage() {
         },
         body: JSON.stringify({ formData }),
       });
-      
-      setCreationProgress(40);
       
       if (!generateResponse.ok) {
         const errorData = await generateResponse.json();
@@ -186,12 +229,10 @@ export default function CreatePlaylistPage() {
       console.log('Generated playlist data:', generatedData);
       
       setCreationStep('finding_tracks');
-      setCreationProgress(60);
       
       // Step 2: Create the playlist in Spotify
       if (generatedData.spotifyTracks && generatedData.spotifyTracks.length > 0) {
         setCreationStep('creating_playlist');
-        setCreationProgress(80);
         
         const createResponse = await fetch('/api/playlists/create', {
           method: 'POST',
@@ -203,7 +244,6 @@ export default function CreatePlaylistPage() {
             description: formData.description,
             isPublic: formData.isPublic,
             tracks: generatedData.spotifyTracks,
-            coverImage: formData.coverImage,
             criteria: {
               genres: formData.genres,
               subGenres: formData.subGenres,
@@ -215,8 +255,6 @@ export default function CreatePlaylistPage() {
             }
           }),
         });
-        
-        setCreationProgress(90);
         
         if (!createResponse.ok) {
           const errorData = await createResponse.json();
@@ -231,15 +269,10 @@ export default function CreatePlaylistPage() {
         setCreationProgress(100);
         setPlaylistId(createdPlaylist.dbPlaylist.id);
         
-        // For free users, we'll only redirect after they view the ad
-        // For premium users, we'll redirect right away
-        const isFreeUser = !userProfileWithPlan?.plan_type || userProfileWithPlan.plan_type === 'free';
-        
-        if (!isFreeUser) {
-          // Premium user - proceed directly
-          handleContinueToPlaylist();
-        }
-        // Free users will wait for ad completion or manual continue
+        // Redirect directly to the playlist details page
+        setTimeout(() => {
+          router.push(`/playlists/${createdPlaylist.dbPlaylist.id}?success=true`);
+        }, 1500); // Slightly longer delay to show 100% completion
       } else {
         throw new Error('No tracks found for your criteria. Please try different selections.');
       }
@@ -250,53 +283,11 @@ export default function CreatePlaylistPage() {
       toast.error(error instanceof Error ? error.message : 'An unexpected error occurred');
     }
   };
-
-  // Handle ad completion
-  const handleAdComplete = () => {
-    setAdComplete(true);
-    
-    // Track ad completion in analytics
-    if (window.gtag) {
-      window.gtag('event', 'ad_completed', {
-        'event_category': 'ads',
-        'event_label': 'playlist_creation'
-      });
-    }
-    
-    // If playlist is complete, proceed to playlist view
-    if (creationStep === 'complete' && playlistId) {
-      handleContinueToPlaylist();
-    }
-  };
-  
-  // Handle ad error
-  const handleAdError = (error: any) => {
-    console.error('Ad error:', error);
-    setAdComplete(true);
-    
-    // If playlist is complete, proceed to playlist view even if ad failed
-    if (creationStep === 'complete' && playlistId) {
-      handleContinueToPlaylist();
-    }
-  };
   
   // Navigate to the created playlist
   const handleContinueToPlaylist = () => {
     if (!playlistId) return;
-    
-    // Add a longer delay before redirecting to ensure cover image is fully processed
-    if (formData.coverImage) {
-      setCreationStep('finalizing');
-      // Wait for cover image to be fully processed by Spotify
-      setTimeout(() => {
-        router.push(`/playlists/${playlistId}?success=true`);
-      }, 2000); // Longer delay to ensure cover image is processed
-    } else {
-      // No cover image, redirect with a shorter delay
-      setTimeout(() => {
-        router.push(`/playlists/${playlistId}?success=true`);
-      }, 1000);
-    }
+    router.push(`/playlists/${playlistId}?success=true`);
   };
 
   // Animation variants
@@ -328,6 +319,8 @@ export default function CreatePlaylistPage() {
         return <GenreSelection formData={formData} updateFormData={updateFormData} />;
       case 'mood':
         return <MoodSelection formData={formData} updateFormData={updateFormData} />;
+      case 'prompt':
+        return <UserPrompt formData={formData} updateFormData={updateFormData} />;
       case 'era':
         return <EraSelection formData={formData} updateFormData={updateFormData} />;
       case 'region':
@@ -352,7 +345,7 @@ export default function CreatePlaylistPage() {
       case 'finalizing':
         return 'Finalizing your playlist with custom cover...';
       case 'complete':
-        return 'Playlist created successfully!';
+        return 'Redirecting to your new playlist...';
       case 'error':
         return 'Error creating playlist';
       default:
@@ -378,47 +371,6 @@ export default function CreatePlaylistPage() {
         return '⏳';
     }
   };
-
-  // Show loading state during playlist creation
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black overflow-hidden">
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-[#121212]"></div>
-          <div className="absolute top-0 -left-40 w-96 h-96 bg-gradient-to-br from-purple-500/20 via-[#1DB954]/20 to-transparent rounded-full filter blur-3xl opacity-50 animate-blob"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-[#1DB954]/20 via-purple-500/20 to-transparent rounded-full filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
-        </div>
-        
-        <motion.div
-          className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-lg border border-white/5 rounded-3xl p-8 max-w-md w-full"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Show ads for free users when generation is complete */}
-          {creationStep === 'complete' ? (
-            <ConditionalAdDisplay
-              onAdComplete={handleAdComplete}
-              onAdError={handleAdError}
-              fallback={
-                <PlaylistReadyDisplay
-                  emoji={getCreationEmoji()}
-                  message={getCreationMessage()}
-                  onContinue={handleContinueToPlaylist}
-                />
-              }
-            />
-          ) : (
-            <GeneratingDisplay
-              emoji={getCreationEmoji()}
-              message={getCreationMessage()}
-              progress={creationProgress}
-            />
-          )}
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black overflow-hidden">
@@ -447,7 +399,7 @@ export default function CreatePlaylistPage() {
             </Link>
           </motion.div>
           <motion.div 
-            className="flex items-center space-x-4"
+            className="flex items-center space-x-6"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -456,38 +408,164 @@ export default function CreatePlaylistPage() {
               href="/dashboard" 
               variant="primary"
               size="md"
+              className="rounded-full w-12 h-12 flex items-center justify-center p-0"
               icon={
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M3 12L5 10M5 10L12 3L19 10M5 10V20C5 20.5523 5.44772 21 6 21H9M19 10L21 12M19 10V20C19 20.5523 18.5523 21 18 21H15M9 21C9.55228 21 10 20.5523 10 20V16C10 15.4477 10.4477 15 11 15H13C13.5523 15 14 15.4477 14 16V20C14 20.5523 14.4477 21 15 21M9 21H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               }
-            >
-              Dashboard
-            </Button>
+            />
           </motion.div>
         </div>
         
-        {/* Progress bar */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-[#A3A3A3]">Step {currentStepIndex + 1} of {progressSteps.length}</span>
-            <span className="text-sm text-[#A3A3A3]">{Math.round(progressPercentage)}% complete</span>
-          </div>
-          <div className="h-2 w-full bg-[#181818] rounded-full overflow-hidden">
-            <motion.div 
-              className="h-full bg-gradient-to-r from-[#1DB954] to-purple-500 rounded-full"
-              initial={{ width: `${progressPercentage}%` }}
-              animate={{ width: `${progressPercentage}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
+        {/* Step Navigation Bar - Modern Style (Replacing Progress Bar) */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          {!isLoading && (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-white">
+                  Step <span className="text-[#1DB954]">{currentStepIndex + 1}</span> of {progressSteps.length}
+                </span>
+                <span className="text-sm font-medium text-white">
+                  <span className="text-[#1DB954]">{Math.round(progressPercentage)}%</span> complete
+                </span>
+              </div>
+              
+              <div className="relative mt-6 mb-10">
+                {/* Container for progress bar and steps */}
+                <div className="relative max-w-4xl mx-auto px-4">
+                  {/* Background track */}
+                  <div className="absolute top-[25px] left-0 right-0 h-[2px] bg-[#333] transform z-0"></div>
+                  
+                  {/* Progress track - only show form progress, not creation progress */}
+                  <motion.div 
+                    className="absolute top-[25px] left-0 h-[2px] bg-[#1DB954] transform z-0"
+                    style={{ 
+                      width: `${(currentStepIndex / (progressSteps.length - 1)) * 100}%`
+                    }}
+                    initial={{ width: 0 }}
+                    animate={{ 
+                      width: `${(currentStepIndex / (progressSteps.length - 1)) * 100}%`
+                    }}
+                    transition={{ duration: 0.5 }}
+                  />
+
+                  {/* Step indicators */}
+                  <div className="relative h-24">
+                    {progressSteps.map((step, index) => {
+                      const isPast = index < currentStepIndex;
+                      const isActive = index === currentStepIndex;
+                      const isComplete = isPast || isActive;
+                      
+                      // Calculate position for all steps
+                      const position = `${(index / (progressSteps.length - 1)) * 100}%`;
+                      
+                      // Step labels for each step
+                      const stepLabels: Record<WizardStep, string> = {
+                        genre: 'Genres',
+                        mood: 'Mood',
+                        era: 'Era',
+                        region: 'Region',
+                        prompt: 'Prompt',
+                        details: 'Details',
+                        review: 'Review'
+                      };
+                      
+                      // Step icons for active steps
+                      const stepIcons: Record<WizardStep, string> = {
+                        genre: '🎸',
+                        mood: '😊',
+                        era: '🕰️',
+                        region: '🌎',
+                        prompt: '💬',
+                        details: '📝',
+                        review: '✓'
+                      };
+                      
+                      return (
+                        <div 
+                          key={step} 
+                          className="flex flex-col items-center absolute transform -translate-x-1/2"
+                          style={{ left: position }}
+                        >
+                          <motion.button
+                            className="relative flex flex-col items-center justify-center cursor-pointer"
+                            onClick={() => handleStepChange(step)}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            {/* Step indicator */}
+                            <motion.div
+                              className={`w-9 h-9 rounded-full flex items-center justify-center z-10 ${
+                                isActive 
+                                  ? 'bg-[#1DB954]' 
+                                  : isPast
+                                    ? 'bg-[#1DB954]'
+                                    : 'bg-[#333]'
+                              }`}
+                              animate={isActive ? {
+                                scale: [1, 1.1, 1],
+                                boxShadow: ['0 0 0 0 rgba(29, 185, 84, 0)', '0 0 0 4px rgba(29, 185, 84, 0.3)', '0 0 0 0 rgba(29, 185, 84, 0)']
+                              } : {}}
+                              transition={{ duration: 2, repeat: isActive ? Infinity : 0, repeatType: "loop" }}
+                            >
+                              {isPast && (
+                                <motion.svg 
+                                  xmlns="http://www.w3.org/2000/svg" 
+                                  className="h-4 w-4 text-white" 
+                                  viewBox="0 0 20 20" 
+                                  fill="currentColor"
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                >
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </motion.svg>
+                              )}
+                              {isActive && (
+                                <motion.div
+                                  className="flex items-center justify-center"
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 500 }}
+                                >
+                                  <span className="text-sm font-medium text-white">{stepIcons[step]}</span>
+                                </motion.div>
+                              )}
+                              {!isComplete && (
+                                <span className="text-xs font-medium text-white">{index + 1}</span>
+                              )}
+                            </motion.div>
+                            
+                            {/* Step label */}
+                            <motion.div 
+                              className="mt-3"
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                            >
+                              <span className={`text-xs font-medium whitespace-nowrap ${
+                                isActive 
+                                  ? 'text-[#1DB954]' 
+                                  : isPast
+                                    ? 'text-white'
+                                    : 'text-gray-500'
+                              }`}>
+                                {stepLabels[step]}
+                              </span>
+                            </motion.div>
+                          </motion.button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </motion.header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Ad banner at the top of the creation flow - subtly integrated */}
-        <AdBanner variant="inline" className="mb-6" />
-        
         <motion.div
           className="relative"
           initial={{ opacity: 0, y: 20 }}
@@ -496,7 +574,7 @@ export default function CreatePlaylistPage() {
         >
           <AnimatePresence mode="wait">
             <motion.div
-              key={currentStep}
+              key={isLoading ? 'loading' : currentStep}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -510,119 +588,152 @@ export default function CreatePlaylistPage() {
                   whileHover={{ boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
-                  {renderStepContent()}
-                  
-                  <div className="mt-8 pt-6 border-t border-[#121212] flex justify-between">
-                    {currentStep !== 'genre' ? (
-                      <motion.button
-                        onClick={prevStep}
-                        className="relative overflow-hidden group rounded-full"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <div className="absolute inset-0 bg-white/10 group-hover:scale-105 transition-transform duration-300"></div>
-                        <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
-                        <span className="relative z-20 px-6 py-2 inline-block font-medium text-white">
-                          Previous
-                        </span>
-                      </motion.button>
-                    ) : (
-                      <div></div> // Empty div to maintain spacing
-                    )}
-                    
-                    {currentStep !== 'review' ? (
-                      <motion.button
-                        onClick={nextStep}
-                        className="relative overflow-hidden group rounded-full"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
-                        <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
-                        <span className="relative z-20 px-6 py-2 inline-block font-medium text-white">
-                          Next
-                        </span>
-                      </motion.button>
-                    ) : (
-                      <motion.button
-                        onClick={handleSubmit}
-                        className="relative overflow-hidden group rounded-full"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954] to-purple-500 group-hover:scale-105 transition-transform duration-300"></div>
-                        <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
-                        <span className="relative z-20 px-6 py-2 inline-block font-medium text-white">
-                          Create Playlist
-                        </span>
-                      </motion.button>
-                    )}
-                  </div>
+                  {isLoading ? (
+                    <div className="py-12">
+                      <div className="text-center mb-10">
+                        <motion.div 
+                          className="text-7xl mb-8"
+                          animate={{ 
+                            scale: [1, 1.2, 1],
+                            rotate: [0, 5, 0, -5, 0],
+                          }}
+                          transition={{ 
+                            duration: 2, 
+                            repeat: Infinity, 
+                            repeatType: "loop" 
+                          }}
+                        >
+                          {getCreationEmoji()}
+                        </motion.div>
+                        <motion.h1 
+                          className="text-3xl font-bold mb-4"
+                          animate={{ opacity: [0.8, 1, 0.8] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          {getCreationMessage()}
+                        </motion.h1>
+                        <p className="text-lg text-[#A3A3A3] max-w-lg mx-auto">
+                          {creationStep === 'generating' && 'Our AI is crafting the perfect playlist for you'}
+                          {creationStep === 'finding_tracks' && 'Searching Spotify for the best matches'}
+                          {creationStep === 'creating_playlist' && 'Almost there! Adding tracks to your Spotify account'}
+                          {creationStep === 'finalizing' && 'Adding finishing touches to your playlist'}
+                          {creationStep === 'complete' && 'Redirecting to your new playlist...'}
+                          {creationStep === 'error' && 'Please try again with different criteria'}
+                        </p>
+                      </div>
+                      
+                      <div className="relative h-10 w-full max-w-2xl mx-auto bg-[#121212] rounded-full mb-10 overflow-hidden">
+                        <motion.div 
+                          className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1DB954] to-purple-500 rounded-full"
+                          initial={{ width: "0%" }}
+                          animate={{ width: `${creationProgress}%` }}
+                          transition={{ duration: 0.8 }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-base font-medium text-white">{Math.round(creationProgress)}%</span>
+                        </div>
+                      </div>
+                      
+                      {/* Animated music notes */}
+                      <div className="relative h-32 max-w-2xl mx-auto">
+                        {[...Array(7)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className={`absolute text-[#1DB954]/50 text-${i % 2 === 0 ? '3xl' : '2xl'}`}
+                            initial={{ 
+                              bottom: 0,
+                              left: `${10 + i * 12}%`,
+                              opacity: 0,
+                              scale: 0.5,
+                            }}
+                            animate={{ 
+                              bottom: ['0%', '100%'],
+                              opacity: [0, 1, 0],
+                              scale: [0.5, i % 2 === 0 ? 1.2 : 1, 0.5],
+                              rotate: [0, i % 2 === 0 ? 15 : -15]
+                            }}
+                            transition={{ 
+                              duration: 4 + i * 0.7,
+                              repeat: Infinity,
+                              delay: i * 0.8,
+                              ease: "easeInOut"
+                            }}
+                          >
+                            {i % 3 === 0 ? '♪' : i % 3 === 1 ? '♫' : '♬'}
+                          </motion.div>
+                        ))}
+                      </div>
+                      
+                      {creationStep === 'error' && (
+                        <div className="flex justify-center mt-6">
+                          <Button
+                            variant="outline"
+                            size="md"
+                            onClick={() => setIsLoading(false)}
+                          >
+                            Back to Form
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {renderStepContent()}
+                      
+                      <div className="mt-8 pt-6 border-t border-[#121212] flex justify-between">
+                        {currentStep !== 'genre' ? (
+                          <motion.button
+                            onClick={prevStep}
+                            className="relative overflow-hidden group rounded-full"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <div className="absolute inset-0 bg-white/10 group-hover:scale-105 transition-transform duration-300"></div>
+                            <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                            <span className="relative z-20 px-6 py-2 inline-block font-medium text-white">
+                              Previous
+                            </span>
+                          </motion.button>
+                        ) : (
+                          <div></div> // Empty div to maintain spacing
+                        )}
+                        
+                        {currentStep !== 'review' ? (
+                          <motion.button
+                            onClick={nextStep}
+                            className="relative overflow-hidden group rounded-full"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
+                            <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                            <span className="relative z-20 px-6 py-2 inline-block font-medium text-white">
+                              Next
+                            </span>
+                          </motion.button>
+                        ) : (
+                          <motion.button
+                            onClick={handleSubmit}
+                            className="relative overflow-hidden group rounded-full"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954] to-purple-500 group-hover:scale-105 transition-transform duration-300"></div>
+                            <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                            <span className="relative z-20 px-6 py-2 inline-block font-medium text-white">
+                              Create Playlist
+                            </span>
+                          </motion.button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               </div>
             </motion.div>
           </AnimatePresence>
         </motion.div>
-        
-        {/* Ad banner at the bottom of the creation flow - after the creation UI */}
-        {currentStep === 'review' && (
-          <AdBanner variant="card" className="mt-10" />
-        )}
       </main>
     </div>
   );
-}
-
-// Modify GeneratingDisplay to include ad for free users
-const GeneratingDisplay = ({ emoji, message, progress }: { emoji: string, message: string, progress: number }) => (
-  <>
-    <div className="text-center mb-6">
-      <div className="text-5xl mb-4">{emoji}</div>
-      <h1 className="text-2xl font-bold mb-2">{message}</h1>
-      <p className="text-[#A3A3A3]">This may take a moment</p>
-    </div>
-    
-    <div className="relative h-6 w-full bg-[#121212] rounded-full mb-4 overflow-hidden">
-      <motion.div 
-        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1DB954] to-purple-500 rounded-full"
-        initial={{ width: "0%" }}
-        animate={{ width: `${progress}%` }}
-        transition={{ duration: 0.5 }}
-      />
-    </div>
-    
-    <p className="text-center text-sm text-[#A3A3A3] mb-6">{progress}% complete</p>
-    
-    {/* Banner ad during generation process */}
-    {progress > 50 && progress < 90 && (
-      <AdBanner variant="inline" className="mt-6" />
-    )}
-  </>
-);
-
-// Playlist ready display for premium users (or after ad)
-const PlaylistReadyDisplay = ({ emoji, message, onContinue }: { emoji: string, message: string, onContinue: () => void }) => (
-  <>
-    <div className="text-center mb-6">
-      <div className="text-5xl mb-4">{emoji}</div>
-      <h1 className="text-2xl font-bold mb-2">{message}</h1>
-      <p className="text-[#A3A3A3]">Your playlist is ready to enjoy</p>
-    </div>
-    
-    <div className="flex justify-center">
-      <Button
-        variant="primary"
-        size="lg"
-        onClick={onContinue}
-        icon={
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        }
-        iconPosition="right"
-      >
-        View Your Playlist
-      </Button>
-    </div>
-  </>
-); 
+} 

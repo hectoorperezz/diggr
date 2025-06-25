@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
@@ -30,8 +30,6 @@ export default function PlaylistDetailPage() {
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Show success toast if redirected from playlist creation
   useEffect(() => {
@@ -93,116 +91,6 @@ export default function PlaylistDetailPage() {
       router.push('/auth/login?returnTo=/playlists/' + params.id);
     }
   }, [authLoading, session, router, params.id]);
-
-  // Handle file selection and upload
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    // Check if the file is a jpeg or png
-    if (file.type !== 'image/jpeg' && file.type !== 'image/png') {
-      toast.error('Please select a JPEG or PNG image');
-      return;
-    }
-    
-    // Check if the file is less than 256KB (Spotify limit)
-    if (file.size > 256 * 1024) {
-      toast.error('Image must be less than 256KB');
-      return;
-    }
-    
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      uploadCoverImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-  
-  const uploadCoverImage = async (imageDataUrl: string) => {
-    if (!playlist) return;
-    
-    setIsUploading(true);
-    const toastId = toast.loading('Uploading cover image...');
-    
-    try {
-      // Convert PNG to JPEG if needed
-      let jpegDataUrl = imageDataUrl;
-      if (imageDataUrl.startsWith('data:image/png')) {
-        jpegDataUrl = await convertPngToJpeg(imageDataUrl);
-      }
-      
-      const response = await fetch(`/api/playlists/${params.id}/cover`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageBase64: jpegDataUrl,
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload cover image');
-      }
-      
-      const data = await response.json();
-      
-      // Update the playlist in state with the new image URL
-      if (data.imageUrl && playlist) {
-        setPlaylist({
-          ...playlist,
-          image_url: data.imageUrl,
-        });
-      }
-      
-      toast.success('Cover image updated successfully!', { id: toastId });
-    } catch (error) {
-      console.error('Error uploading cover image:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to upload cover image', { id: toastId });
-    } finally {
-      setIsUploading(false);
-      // Clear the file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-  
-  // Convert PNG to JPEG using Canvas
-  const convertPngToJpeg = (pngDataUrl: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Could not get canvas context'));
-          return;
-        }
-        
-        // Fill with white background (since JPEG doesn't support transparency)
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw the image on top
-        ctx.drawImage(img, 0, 0);
-        
-        // Convert to JPEG data URL
-        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        resolve(jpegDataUrl);
-      };
-      
-      img.onerror = () => {
-        reject(new Error('Error loading image'));
-      };
-      
-      img.src = pngDataUrl;
-    });
-  };
 
   // Render loading state
   if (isLoading) {
@@ -311,7 +199,7 @@ export default function PlaylistDetailPage() {
             </Link>
           </motion.div>
           <motion.div 
-            className="flex items-center space-x-4"
+            className="flex items-center space-x-6"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -320,14 +208,13 @@ export default function PlaylistDetailPage() {
               href="/dashboard" 
               variant="primary"
               size="md"
+              className="rounded-full w-12 h-12 flex items-center justify-center p-0"
               icon={
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M3 12L5 10M5 10L12 3L19 10M5 10V20C5 20.5523 5.44772 21 6 21H9M19 10L21 12M19 10V20C19 20.5523 18.5523 21 18 21H15M9 21C9.55228 21 10 20.5523 10 20V16C10 15.4477 10.4477 15 11 15H13C13.5523 15 14 15.4477 14 16V20C14 20.5523 14.4477 21 15 21M9 21H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               }
-            >
-              Dashboard
-            </Button>
+            />
           </motion.div>
         </div>
       </motion.header>
@@ -336,31 +223,11 @@ export default function PlaylistDetailPage() {
         {/* Ad banner at the top of the playlist detail page */}
         <AdBanner variant="inline" className="mb-8" />
         
-        <motion.div
-          className="mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Button
-            href="/dashboard"
-            variant="outline"
-            size="sm"
-            icon={
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            }
-          >
-            Back to Dashboard
-          </Button>
-        </motion.div>
-
         <div className="max-w-5xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-10">
-            {/* Playlist Image with Upload Option */}
-            <div className="w-64 h-64 flex-shrink-0 relative group">
+            {/* Playlist Image */}
+            <div className="w-64 h-64 flex-shrink-0">
               {playlist.image_url ? (
                 <img 
                   src={playlist.image_url} 
@@ -372,31 +239,6 @@ export default function PlaylistDetailPage() {
                   <span className="text-6xl">🎵</span>
                 </div>
               )}
-              
-              {/* Overlay for upload button */}
-              <div className="absolute inset-0 bg-black/60 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center">
-                <p className="text-sm text-white/80 mb-2">Change cover image</p>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  ref={fileInputRef}
-                  disabled={isUploading}
-                />
-                <motion.button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-6 py-3 bg-[#1DB954] text-white rounded-full text-sm font-medium"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  disabled={isUploading}
-                >
-                  {isUploading ? 'Uploading...' : 'Upload Image'}
-                </motion.button>
-                <p className="text-xs text-white/60 mt-2 px-4 text-center">
-                  JPEG/PNG, max 256KB
-                </p>
-              </div>
             </div>
             
             {/* Playlist Info */}

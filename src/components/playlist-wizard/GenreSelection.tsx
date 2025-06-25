@@ -31,7 +31,7 @@ const genreOptions = [
     name: 'Electronic',
     value: 'electronic',
     emoji: '🎛️',
-    subgenres: ['House', 'Techno', 'Drum & Bass', 'Dubstep', 'Ambient', 'Trance', 'IDM']
+    subgenres: ['House', 'Techno', 'Drum & Bass', 'Dubstep', 'Ambient', 'Trance', 'IDM', 'Jungle']
   },
   {
     name: 'R&B',
@@ -52,10 +52,10 @@ const genreOptions = [
     subgenres: ['Baroque', 'Romantic', 'Contemporary Classical', 'Minimalist', 'Opera', 'Symphony', 'Chamber Music']
   },
   {
-    name: 'Country',
-    value: 'country',
-    emoji: '🤠',
-    subgenres: ['Country Pop', 'Country Rock', 'Outlaw Country', 'Bluegrass', 'Americana', 'Alt-Country', 'Traditional']
+    name: 'Latin',
+    value: 'latin',
+    emoji: '💃',
+    subgenres: ['Reggaeton', 'Salsa', 'Bachata', 'Dembow', 'Cumbia', 'Samba', 'Corridos']
   },
   {
     name: 'Folk',
@@ -67,7 +67,7 @@ const genreOptions = [
     name: 'Reggae',
     value: 'reggae',
     emoji: '🏝️',
-    subgenres: ['Dub', 'Roots Reggae', 'Dancehall', 'Ska', 'Rocksteady', 'Ragga', 'Reggaeton']
+    subgenres: ['Dub', 'Roots Reggae', 'Dancehall', 'Ska', 'Rocksteady', 'Ragga']
   },
   {
     name: 'Metal',
@@ -94,7 +94,7 @@ const GenreSelection: React.FC<GenreSelectionProps> = ({ formData, updateFormDat
     let updatedGenres: string[];
     
     if (selectedGenres.includes(genreValue)) {
-      updatedGenres = selectedGenres.filter(g => g !== genreValue);
+      updatedGenres = [];
       
       // Also remove any subgenres from this genre
       const genreOption = genreOptions.find(g => g.value === genreValue);
@@ -107,7 +107,23 @@ const GenreSelection: React.FC<GenreSelectionProps> = ({ formData, updateFormDat
         updateFormData('subGenres', updatedSubGenres);
       }
     } else {
-      updatedGenres = [...selectedGenres, genreValue];
+      // Allow only one genre selection
+      updatedGenres = [genreValue];
+      
+      // Remove any subgenres from previously selected genres
+      const previousGenre = selectedGenres[0];
+      if (previousGenre) {
+        const previousGenreOption = genreOptions.find(g => g.value === previousGenre);
+        if (previousGenreOption) {
+          const subgenresToRemove = previousGenreOption.subgenres;
+          const updatedSubGenres = selectedSubGenres.filter(sg => 
+            !subgenresToRemove.includes(sg)
+          );
+          setSelectedSubGenres(updatedSubGenres);
+          updateFormData('subGenres', updatedSubGenres);
+        }
+      }
+      
       // Auto-expand the genre when selected
       setExpandedGenre(genreValue);
     }
@@ -125,9 +141,16 @@ const GenreSelection: React.FC<GenreSelectionProps> = ({ formData, updateFormDat
     } else {
       // Ensure parent genre is selected
       if (!selectedGenres.includes(parentGenre)) {
-        const updatedGenres = [...selectedGenres, parentGenre];
-        setSelectedGenres(updatedGenres);
-        updateFormData('genres', updatedGenres);
+        // Replace any existing genre with this one
+        setSelectedGenres([parentGenre]);
+        updateFormData('genres', [parentGenre]);
+      }
+      
+      // Limit to 3 subgenres maximum
+      if (selectedSubGenres.length >= 3) {
+        // Show max subgenres reached notification
+        showMaxSubgenresReached();
+        return;
       }
       
       updatedSubGenres = [...selectedSubGenres, subgenre];
@@ -135,6 +158,16 @@ const GenreSelection: React.FC<GenreSelectionProps> = ({ formData, updateFormDat
     
     setSelectedSubGenres(updatedSubGenres);
     updateFormData('subGenres', updatedSubGenres);
+  };
+
+  // Max subgenres notification
+  const [showMaxReached, setShowMaxReached] = useState(false);
+  
+  const showMaxSubgenresReached = () => {
+    setShowMaxReached(true);
+    setTimeout(() => {
+      setShowMaxReached(false);
+    }, 2000);
   };
 
   // Toggle expanded genre
@@ -187,7 +220,7 @@ const GenreSelection: React.FC<GenreSelectionProps> = ({ formData, updateFormDat
     <div>
       <h2 className="text-2xl font-bold mb-4">Select Your Music Vibes ✨</h2>
       <p className="text-gray-400 mb-6">
-        Choose the musical genres you want in your playlist. You can select multiple genres and specific subgenres.
+        Choose one musical genre and up to 3 specific subgenres for your playlist.
       </p>
       
       {/* Search box */}
@@ -222,7 +255,7 @@ const GenreSelection: React.FC<GenreSelectionProps> = ({ formData, updateFormDat
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          <h3 className="text-sm font-medium text-gray-400 mb-3">Selected Genres:</h3>
+          <h3 className="text-sm font-medium text-gray-400 mb-3">Selected Genre:</h3>
           <div className="flex flex-wrap gap-2">
             {selectedGenres.map(genre => {
               const genreOption = genreOptions.find(g => g.value === genre);
@@ -251,6 +284,66 @@ const GenreSelection: React.FC<GenreSelectionProps> = ({ formData, updateFormDat
                 </motion.span>
               );
             })}
+          </div>
+        </motion.div>
+      )}
+      
+      {selectedSubGenres.length > 0 && (
+        <motion.div 
+          className="mb-8 relative"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h3 className="text-sm font-medium text-gray-400 mb-3">
+            Selected Subgenres: <span className={`font-bold ${selectedSubGenres.length === 3 ? 'text-[#1DB954]' : ''}`}>{selectedSubGenres.length}/3</span>
+          </h3>
+          
+          {/* Max subgenres reached animation - improved styling */}
+          {showMaxReached && (
+            <motion.div 
+              className="mb-4 bg-[#ff4d4f]/10 border border-[#ff4d4f]/30 text-[#ff4d4f] text-center py-3 px-4 rounded-lg shadow-lg"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <div className="flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                Maximum of 3 subgenres reached! Remove one to add another.
+              </div>
+            </motion.div>
+          )}
+          
+          <div className="flex flex-wrap gap-2">
+            {selectedSubGenres.map(subgenre => (
+              <motion.span 
+                key={subgenre} 
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#333333] text-white border border-[#1DB954]/50"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                layout
+              >
+                {subgenre}
+                <button
+                  type="button"
+                  className="ml-2 inline-flex items-center transition-transform duration-200 hover:rotate-90"
+                  onClick={() => {
+                    const updatedSubGenres = selectedSubGenres.filter(sg => sg !== subgenre);
+                    setSelectedSubGenres(updatedSubGenres);
+                    updateFormData('subGenres', updatedSubGenres);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </motion.span>
+            ))}
           </div>
         </motion.div>
       )}

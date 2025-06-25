@@ -252,39 +252,6 @@ export async function getCurrentUser(accessToken: string): Promise<any> {
 }
 
 /**
- * Upload a custom image to a playlist
- * Note: The image must be a JPEG and under 256KB
- * @param playlistId - The Spotify playlist ID
- * @param accessToken - The Spotify access token
- * @param imageBase64 - The base64-encoded image without the "data:image/jpeg;base64," prefix
- */
-export async function uploadPlaylistCover(
-  playlistId: string,
-  accessToken: string,
-  imageBase64: string
-): Promise<void> {
-  // Remove data URL prefix if it exists
-  const base64Data = imageBase64.replace(/^data:image\/jpeg;base64,/, '');
-  
-  const response = await fetch(
-    `https://api.spotify.com/v1/playlists/${playlistId}/images`,
-    {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'image/jpeg',
-      },
-      body: base64Data,
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Spotify API error: ${response.status} ${response.statusText} - ${errorText}`);
-  }
-}
-
-/**
  * Get the current user's playlists
  */
 export async function getCurrentUserPlaylists(

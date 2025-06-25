@@ -31,7 +31,7 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ formData, updateFormD
 
   // Handle track count change
   const handleTrackCountChange = (value: number) => {
-    if (value >= 10 && value <= 100) {
+    if (value >= 10 && value <= 50) {
       setTrackCount(value);
       updateFormData('trackCount', value);
     }
@@ -51,11 +51,11 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ formData, updateFormD
 
   // Define uniqueness labels with emojis
   const uniquenessLabels = [
-    { value: 1, label: 'Mainstream', emoji: '📻', description: 'Mostly popular and well-known tracks' },
-    { value: 2, label: 'Balanced - Popular', emoji: '🎵', description: 'Mix of popular tracks with some lesser-known ones' },
-    { value: 3, label: 'Balanced', emoji: '⚖️', description: 'Equal mix of popular and obscure tracks' },
-    { value: 4, label: 'Balanced - Obscure', emoji: '💎', description: 'More obscure tracks with some popular ones' },
-    { value: 5, label: 'Deep Cuts', emoji: '🔍', description: 'Mostly obscure and hidden gems' },
+    { value: 1, label: 'Mainstream', emoji: '📻', description: 'Popular hits everyone knows and loves. Think Billboard Hot 100 and radio favorites.' },
+    { value: 2, label: 'Popular Mix', emoji: '🎵', description: 'Mostly popular tracks with some lesser-known songs from well-known artists.' },
+    { value: 3, label: 'Balanced', emoji: '⚖️', description: 'Equal mix of popular hits and deeper cuts for a varied listening experience.' },
+    { value: 4, label: 'Rare Mix', emoji: '💎', description: 'Mostly lesser-known tracks with a few recognizable songs to anchor the playlist.' },
+    { value: 5, label: 'Deep Cuts', emoji: '🔍', description: 'Hidden gems, B-sides, and underground tracks for true music explorers.' },
   ];
 
   // Animation variants
@@ -201,7 +201,7 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ formData, updateFormD
                 type="range"
                 id="track-count"
                 min="10"
-                max="100"
+                max="50"
                 step="5"
                 value={trackCount}
                 onChange={(e) => handleTrackCountChange(parseInt(e.target.value))}
@@ -210,7 +210,7 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ formData, updateFormD
               
               <motion.div 
                 className="absolute -top-7 text-white text-xs bg-[#1DB954] rounded-md px-2 py-1 transform -translate-x-1/2 shadow-lg"
-                style={{ left: `${((trackCount - 10) / 90) * 100}%` }}
+                style={{ left: `${((trackCount - 10) / 40) * 100}%` }}
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
               >
@@ -221,14 +221,14 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ formData, updateFormD
             <motion.button
               type="button"
               onClick={() => handleTrackCountChange(trackCount + 5)}
-              disabled={trackCount >= 100}
+              disabled={trackCount >= 50}
               className={`rounded-full w-10 h-10 flex items-center justify-center ${
-                trackCount >= 100 
+                trackCount >= 50 
                   ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
                   : 'bg-[#282828] text-white hover:bg-[#333333]'
               }`}
-              whileHover={trackCount < 100 ? { scale: 1.1 } : {}}
-              whileTap={trackCount < 100 ? { scale: 0.9 } : {}}
+              whileHover={trackCount < 50 ? { scale: 1.1 } : {}}
+              whileTap={trackCount < 50 ? { scale: 0.9 } : {}}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -237,7 +237,7 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ formData, updateFormD
           </div>
           <div className="flex justify-between text-xs text-gray-500 mt-2">
             <span>10 tracks</span>
-            <span>100 tracks</span>
+            <span>50 tracks</span>
           </div>
         </motion.div>
         
@@ -298,43 +298,66 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ formData, updateFormD
           <label htmlFor="uniqueness" className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
             <span className="mr-2">{currentUniqueness?.emoji}</span> Uniqueness Level
           </label>
-          <div className="bg-gradient-to-r from-[#1DB954]/10 via-[#1DB954]/20 to-[#1DB954]/30 p-5 rounded-xl mb-5 shadow-inner">
+          <div className="bg-gradient-to-r from-[#1a1a1a] via-[#202020] to-[#1a1a1a] p-5 rounded-xl mb-5 shadow-lg border border-[#333]/20">
             <div className="flex items-center justify-between mb-5">
-              <motion.span 
-                className="flex flex-col items-center"
-                animate={{ scale: uniquenessLevel === 1 ? 1.1 : 1 }}
-              >
-                <span className="text-2xl mb-1">📻</span>
-                <span className={`text-xs ${uniquenessLevel === 1 ? 'text-white font-bold' : 'text-gray-400'}`}>Mainstream</span>
-              </motion.span>
-              <motion.span 
-                className="flex flex-col items-center"
-                animate={{ scale: uniquenessLevel === 2 ? 1.1 : 1 }}
-              >
-                <span className="text-2xl mb-1">🎵</span>
-                <span className={`text-xs ${uniquenessLevel === 2 ? 'text-white font-bold' : 'text-gray-400'}`}>Popular Mix</span>
-              </motion.span>
-              <motion.span 
-                className="flex flex-col items-center"
-                animate={{ scale: uniquenessLevel === 3 ? 1.1 : 1 }}
-              >
-                <span className="text-2xl mb-1">⚖️</span>
-                <span className={`text-xs ${uniquenessLevel === 3 ? 'text-white font-bold' : 'text-gray-400'}`}>Balanced</span>
-              </motion.span>
-              <motion.span 
-                className="flex flex-col items-center"
-                animate={{ scale: uniquenessLevel === 4 ? 1.1 : 1 }}
-              >
-                <span className="text-2xl mb-1">💎</span>
-                <span className={`text-xs ${uniquenessLevel === 4 ? 'text-white font-bold' : 'text-gray-400'}`}>Rare Mix</span>
-              </motion.span>
-              <motion.span 
-                className="flex flex-col items-center"
-                animate={{ scale: uniquenessLevel === 5 ? 1.1 : 1 }}
-              >
-                <span className="text-2xl mb-1">🔍</span>
-                <span className={`text-xs ${uniquenessLevel === 5 ? 'text-white font-bold' : 'text-gray-400'}`}>Deep Cuts</span>
-              </motion.span>
+              {uniquenessLabels.map((level) => (
+                <motion.span 
+                  key={level.value}
+                  className="flex flex-col items-center cursor-pointer"
+                  onClick={() => handleUniquenessChange(level.value)}
+                  animate={{ 
+                    scale: uniquenessLevel === level.value ? 1.1 : 1,
+                    y: uniquenessLevel === level.value ? -3 : 0
+                  }}
+                  whileHover={{ scale: 1.05, y: -2 }}
+                >
+                  <span className={`text-2xl mb-1 transition-all duration-300 ${uniquenessLevel === level.value ? 'grayscale-0' : 'grayscale opacity-60'}`}>
+                    {level.emoji}
+                  </span>
+                  <span className={`text-xs transition-all duration-300 ${uniquenessLevel === level.value ? 'text-[#1DB954] font-bold' : 'text-gray-400'}`}>
+                    {level.label.split(' ')[0]}
+                  </span>
+                </motion.span>
+              ))}
+            </div>
+            
+            <div className="relative mb-6">
+              {/* Track background */}
+              <div className="h-2 bg-[#333] rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-[#1DB954]/80 to-[#1DB954]"
+                  style={{ width: `${((uniquenessLevel - 1) / 4) * 100}%` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${((uniquenessLevel - 1) / 4) * 100}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+              
+              {/* Tick marks */}
+              <div className="w-full flex justify-between absolute -top-1">
+                {[1, 2, 3, 4, 5].map(value => (
+                  <motion.div
+                    key={value}
+                    className={`h-4 w-1 rounded-full ${uniquenessLevel >= value ? 'bg-[#1DB954]' : 'bg-gray-600'}`}
+                    whileHover={{ height: 6 }}
+                  />
+                ))}
+              </div>
+              
+              {/* Interactive slider area - improved for better UX */}
+              <div className="absolute inset-0 -top-3 -bottom-3">
+                <input
+                  type="range"
+                  id="uniqueness"
+                  min="1"
+                  max="5"
+                  step="1"
+                  value={uniquenessLevel}
+                  onChange={(e) => handleUniquenessChange(parseInt(e.target.value))}
+                  className="w-full h-8 opacity-0 cursor-pointer absolute z-10"
+                  style={{ touchAction: 'none' }}
+                />
+              </div>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -356,30 +379,15 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ formData, updateFormD
               </motion.button>
               
               <div className="relative flex-grow">
-                <input
-                  type="range"
-                  id="uniqueness"
-                  min="1"
-                  max="5"
-                  step="1"
-                  value={uniquenessLevel}
-                  onChange={(e) => handleUniquenessChange(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#1DB954]"
-                />
-                
-                <motion.div
-                  className="w-full flex justify-between absolute -top-1"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  {[1, 2, 3, 4, 5].map(value => (
-                    <motion.div
-                      key={value}
-                      className={`h-4 w-1 rounded-full ${uniquenessLevel >= value ? 'bg-[#1DB954]' : 'bg-gray-600'}`}
-                      whileHover={{ height: 6 }}
+                {/* Visual indicators for slider positions */}
+                <div className="flex justify-between px-1">
+                  {uniquenessLabels.map((level) => (
+                    <div 
+                      key={level.value}
+                      className="w-0.5 h-0.5 bg-transparent"
                     />
                   ))}
-                </motion.div>
+                </div>
               </div>
               
               <motion.button
@@ -402,17 +410,29 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ formData, updateFormD
           </div>
           
           <motion.div 
-            className="bg-[#282828] p-4 rounded-lg"
+            className="bg-[#282828] p-5 rounded-lg border border-[#333]/30 shadow-inner"
             animate={{ 
               backgroundColor: uniquenessLevel === 5 ? ['#282828', '#1e3a29', '#282828'] : '#282828' 
             }}
             transition={{ duration: 2, repeat: uniquenessLevel === 5 ? Infinity : 0 }}
           >
-            <div className="flex items-center mb-2">
-              <span className="text-xl mr-2">{currentUniqueness?.emoji}</span>
-              <span className="font-medium text-[#1DB954]">{currentUniqueness?.label}</span>
+            <div className="flex items-center mb-3">
+              <span className="text-2xl mr-3">{currentUniqueness?.emoji}</span>
+              <div>
+                <span className="font-medium text-[#1DB954] block">{currentUniqueness?.label}</span>
+                <div className="flex mt-1">
+                  {Array(5).fill(0).map((_, i) => (
+                    <motion.span
+                      key={i}
+                      className={`h-1 w-4 rounded-full mr-1 ${
+                        i < uniquenessLevel ? 'bg-[#1DB954]' : 'bg-gray-700'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-300 leading-relaxed pl-10">
               {currentUniqueness?.description}
             </p>
           </motion.div>

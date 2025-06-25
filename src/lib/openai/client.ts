@@ -14,12 +14,13 @@ const openai = new OpenAI({
 export interface PlaylistCriteria {
   genres: string[];
   subgenres?: string[];
-  country?: string;
-  language?: string;
-  mood?: string;
-  era?: string;
+  regions?: string[];
+  languages?: string[];
+  moods?: string[];
+  eras?: string[];
   uniqueness: number; // 1-10, where 10 is most unique/obscure
   songCount: number;
+  userPrompt?: string; // User's natural language input
 }
 
 export interface TrackRecommendation {
@@ -38,6 +39,14 @@ export async function generatePlaylist(
 ): Promise<TrackRecommendation[]> {
   // Construct a prompt based on the criteria
   const prompt = constructPrompt(criteria);
+
+  // Log the prompt for development purposes
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`\n[${new Date().toISOString()}] [DEV ONLY] OpenAI API Request:`);
+    console.log('='.repeat(80));
+    console.log('PROMPT:', prompt);
+    console.log('='.repeat(80));
+  }
 
   // Call the OpenAI API
   const response = await openai.chat.completions.create({
@@ -63,6 +72,19 @@ export async function generatePlaylist(
   // Parse the response
   const content = response.choices[0]?.message.content;
   
+  // Log the response for development purposes
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`\n[${new Date().toISOString()}] [DEV ONLY] OpenAI API Response:`);
+    console.log('='.repeat(80));
+    console.log('CONTENT:', content?.substring(0, 500) + (content && content.length > 500 ? '...' : ''));
+    console.log('TOKEN USAGE:', {
+      promptTokens: response.usage?.prompt_tokens,
+      completionTokens: response.usage?.completion_tokens,
+      totalTokens: response.usage?.total_tokens
+    });
+    console.log('='.repeat(80));
+  }
+  
   if (!content) {
     throw new Error('Failed to generate playlist recommendations');
   }
@@ -80,7 +102,7 @@ export async function generatePlaylist(
  * Construct a prompt for the OpenAI API based on user criteria
  */
 function constructPrompt(criteria: PlaylistCriteria): string {
-  const { genres, subgenres, country, language, mood, era, uniqueness, songCount } = criteria;
+  const { genres, subgenres, regions, languages, moods, eras, uniqueness, songCount, userPrompt } = criteria;
   
   let prompt = `Create a playlist with ${songCount} songs `;
   
@@ -91,22 +113,24 @@ function constructPrompt(criteria: PlaylistCriteria): string {
     prompt += `, specifically the ${subgenres.join(', ')} subgenre${subgenres.length > 1 ? 's' : ''}`;
   }
   
-  // Add country and language
-  if (country) {
-    prompt += `, from ${country}`;
+  // Add regions
+  if (regions && regions.length > 0) {
+    prompt += `, from ${regions.length > 1 ? 'these regions: ' : ''}${regions.join(', ')}`;
   }
   
-  if (language) {
-    prompt += `, in ${language}`;
+  // Add languages
+  if (languages && languages.length > 0) {
+    prompt += `, in ${languages.length > 1 ? 'these languages: ' : ''}${languages.join(', ')}`;
   }
   
-  // Add mood and era
-  if (mood) {
-    prompt += `, with a ${mood} mood`;
+  // Add moods
+  if (moods && moods.length > 0) {
+    prompt += `, with ${moods.length > 1 ? 'these moods: ' : 'a '}${moods.join(', ')}`;
   }
   
-  if (era) {
-    prompt += `, from the ${era} era`;
+  // Add eras
+  if (eras && eras.length > 0) {
+    prompt += `, from ${eras.length > 1 ? 'these eras: ' : 'the '}${eras.join(', ')}`;
   }
   
   // Add uniqueness parameter
@@ -116,6 +140,12 @@ function constructPrompt(criteria: PlaylistCriteria): string {
     prompt += `. Include a mix of well-known tracks and some deeper cuts.`;
   } else {
     prompt += `. Focus on popular, well-known tracks that most people would recognize.`;
+  }
+  
+  // Add user prompt if available
+  if (userPrompt && userPrompt.trim()) {
+    prompt += `\n\nAdditionally, the user has provided the following specific request: "${userPrompt.trim()}". 
+    Please incorporate these preferences into your recommendations while still adhering to the other criteria.`;
   }
   
   prompt += `
@@ -133,6 +163,31 @@ function constructPrompt(criteria: PlaylistCriteria): string {
       }
     ]
   }`;
+  
+  return prompt;
+}
+
+/**
+ * For testing purposes only - logs a prompt with multiple selections
+ */
+export function testMultipleSelections() {
+  const testCriteria: PlaylistCriteria = {
+    genres: ['rock', 'pop'],
+    subgenres: ['classic rock', 'indie pop'],
+    regions: ['us', 'uk', 'japan'],
+    languages: ['english', 'japanese'],
+    moods: ['upbeat', 'nostalgic', 'chill'],
+    eras: ['1970s', '1980s', '1990s'],
+    uniqueness: 5,
+    songCount: 25,
+    userPrompt: 'I want a mix of classic rock hits and modern indie pop songs'
+  };
+  
+  const prompt = constructPrompt(testCriteria);
+  console.log('TEST MULTIPLE SELECTIONS PROMPT:');
+  console.log('='.repeat(80));
+  console.log(prompt);
+  console.log('='.repeat(80));
   
   return prompt;
 } 

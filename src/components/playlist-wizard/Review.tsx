@@ -1,7 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { PlaylistFormData } from '@/app/create-playlist/page';
 import { motion } from 'framer-motion';
-import { toast } from 'react-hot-toast';
 
 interface ReviewProps {
   formData: PlaylistFormData;
@@ -87,9 +86,6 @@ const uniquenessLevels = [
 
 const Review: React.FC<ReviewProps> = ({ formData, updateFormData }) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(formData.coverImage || null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Helper function to toggle section
   const toggleSection = (section: string) => {
@@ -198,93 +194,6 @@ const Review: React.FC<ReviewProps> = ({ formData, updateFormData }) => {
     }
   };
 
-  // Handle file selection and upload
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    // Check if the file is a jpeg or png
-    if (file.type !== 'image/jpeg' && file.type !== 'image/png') {
-      toast.error('Please select a JPEG or PNG image');
-      return;
-    }
-    
-    // Check if the file is less than 256KB (Spotify limit)
-    if (file.size > 256 * 1024) {
-      toast.error('Image must be less than 256KB');
-      return;
-    }
-    
-    setIsUploading(true);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      processImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-  
-  const processImage = async (imageDataUrl: string) => {
-    try {
-      // Convert PNG to JPEG if needed
-      let jpegDataUrl = imageDataUrl;
-      if (imageDataUrl.startsWith('data:image/png')) {
-        jpegDataUrl = await convertPngToJpeg(imageDataUrl);
-      }
-      
-      // Set the preview image
-      setPreviewImage(jpegDataUrl);
-      
-      // Update the form data with the base64 image
-      updateFormData('coverImage', jpegDataUrl);
-      
-      toast.success('Cover image uploaded successfully!');
-    } catch (error) {
-      console.error('Error processing image:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to process image');
-    } finally {
-      setIsUploading(false);
-      // Clear the file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-  
-  // Convert PNG to JPEG using Canvas
-  const convertPngToJpeg = (pngDataUrl: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Could not get canvas context'));
-          return;
-        }
-        
-        // Fill with black background (since JPEG doesn't support transparency)
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw the image on top
-        ctx.drawImage(img, 0, 0);
-        
-        // Convert to JPEG data URL
-        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        resolve(jpegDataUrl);
-      };
-      
-      img.onerror = () => {
-        reject(new Error('Error loading image'));
-      };
-      
-      img.src = pngDataUrl;
-    });
-  };
-
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4 flex items-center">
@@ -300,81 +209,6 @@ const Review: React.FC<ReviewProps> = ({ formData, updateFormData }) => {
         initial="hidden"
         animate="visible"
       >
-        {/* Playlist Cover Image */}
-        <motion.div 
-          className="bg-gradient-to-br from-[#282828] to-[#1A1A1A] rounded-xl p-5 shadow-md cursor-pointer"
-          variants={itemVariants}
-          whileHover={{ scale: 1.01 }}
-          onClick={() => toggleSection('cover')}
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium flex items-center">
-              <span className="text-xl mr-2">🖼️</span>
-              Playlist Cover Image
-            </h3>
-            <motion.span 
-              animate={{ rotate: activeSection === 'cover' ? 180 : 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </motion.span>
-          </div>
-          
-          <motion.div
-            variants={cardVariants}
-            initial="collapsed"
-            animate={activeSection === 'cover' ? 'expanded' : 'collapsed'}
-          >
-            <motion.div 
-              variants={childVariants}
-              className="mt-4 space-y-3"
-            >
-              <div className="flex flex-col items-center">
-                <div className="relative w-48 h-48 mb-4 bg-black rounded-lg overflow-hidden">
-                  {previewImage ? (
-                    <img 
-                      src={previewImage} 
-                      alt="Playlist cover preview" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-[#282828]">
-                      <span className="text-5xl mb-2">🎵</span>
-                      <span className="text-xs text-gray-400">No image selected</span>
-                    </div>
-                  )}
-                </div>
-                
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  ref={fileInputRef}
-                  disabled={isUploading}
-                />
-                
-                <motion.button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-[#1DB954] text-white rounded-full text-sm font-medium mb-2"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  disabled={isUploading}
-                >
-                  {isUploading ? 'Processing...' : previewImage ? 'Change Image' : 'Upload Cover Image'}
-                </motion.button>
-                
-                <p className="text-xs text-gray-400 text-center">
-                  Add a custom cover image for your playlist.<br />
-                  JPEG or PNG, max 256KB.
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        </motion.div>
-        
         {/* Playlist details */}
         <motion.div 
           className="bg-gradient-to-br from-[#282828] to-[#1A1A1A] rounded-xl p-5 shadow-md cursor-pointer"
@@ -558,6 +392,46 @@ const Review: React.FC<ReviewProps> = ({ formData, updateFormData }) => {
             </motion.div>
           </motion.div>
         </motion.div>
+        
+        {/* User Prompt */}
+        {formData.userPrompt && (
+          <motion.div 
+            className="bg-gradient-to-br from-[#282828] to-[#1A1A1A] rounded-xl p-5 shadow-md cursor-pointer"
+            variants={itemVariants}
+            whileHover={{ scale: 1.01 }}
+            onClick={() => toggleSection('prompt')}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium flex items-center">
+                <span className="text-xl mr-2">✨</span>
+                Your Personal Touch
+              </h3>
+              <motion.span 
+                animate={{ rotate: activeSection === 'prompt' ? 180 : 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </motion.span>
+            </div>
+            
+            <motion.div
+              variants={cardVariants}
+              initial="collapsed"
+              animate={activeSection === 'prompt' ? 'expanded' : 'collapsed'}
+            >
+              <motion.div 
+                variants={childVariants}
+                className="mt-4"
+              >
+                <div className="px-4 py-3 bg-[#1DB954]/10 rounded-lg text-gray-200 italic">
+                  "{formData.userPrompt}"
+                </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
         
         {/* Eras */}
         <motion.div 

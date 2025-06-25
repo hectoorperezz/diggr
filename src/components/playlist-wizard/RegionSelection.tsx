@@ -11,16 +11,16 @@ interface RegionSelectionProps {
 const regionOptions = [
   {
     continent: 'North America',
+    value: 'north-america',
     emoji: '🌎',
     regions: [
       { name: 'United States', value: 'us', emoji: '🇺🇸' },
       { name: 'Canada', value: 'canada', emoji: '🇨🇦' },
-      { name: 'Mexico', value: 'mexico', emoji: '🇲🇽' },
-      { name: 'Caribbean', value: 'caribbean', emoji: '🏝️' },
     ]
   },
   {
     continent: 'Europe',
+    value: 'europe',
     emoji: '🌍',
     regions: [
       { name: 'United Kingdom', value: 'uk', emoji: '🇬🇧' },
@@ -34,8 +34,12 @@ const regionOptions = [
   },
   {
     continent: 'Latin America',
-    emoji: '💃',
+    value: 'latin-america',
+    emoji: '🌎',
     regions: [
+      { name: 'Mexico', value: 'mexico', emoji: '🇲🇽' },
+      { name: 'Cuba', value: 'cuba', emoji: '🇨🇺' },
+      { name: 'Puerto Rico', value: 'puerto-rico', emoji: '🇵🇷' },
       { name: 'Brazil', value: 'brazil', emoji: '🇧🇷' },
       { name: 'Argentina', value: 'argentina', emoji: '🇦🇷' },
       { name: 'Colombia', value: 'colombia', emoji: '🇨🇴' },
@@ -45,6 +49,7 @@ const regionOptions = [
   },
   {
     continent: 'Asia',
+    value: 'asia',
     emoji: '🌏',
     regions: [
       { name: 'Japan', value: 'japan', emoji: '🇯🇵' },
@@ -57,6 +62,7 @@ const regionOptions = [
   },
   {
     continent: 'Africa',
+    value: 'africa',
     emoji: '🌍',
     regions: [
       { name: 'West Africa', value: 'west-africa', emoji: '🇳🇬' },
@@ -67,7 +73,8 @@ const regionOptions = [
   },
   {
     continent: 'Oceania',
-    emoji: '🏝️',
+    value: 'oceania',
+    emoji: '🌏',
     regions: [
       { name: 'Australia', value: 'australia', emoji: '🇦🇺' },
       { name: 'New Zealand', value: 'new-zealand', emoji: '🇳🇿' },
@@ -90,11 +97,6 @@ const languageOptions = [
   { name: 'Hindi', value: 'hindi', emoji: '🇮🇳' },
   { name: 'Arabic', value: 'arabic', emoji: '🇸🇦' },
   { name: 'Russian', value: 'russian', emoji: '🇷🇺' },
-  { name: 'Swedish', value: 'swedish', emoji: '🇸🇪' },
-  { name: 'Dutch', value: 'dutch', emoji: '🇳🇱' },
-  { name: 'Afrobeats', value: 'afrobeats', emoji: '🥁' },
-  { name: 'Latin', value: 'latin', emoji: '💃' },
-  { name: 'Indigenous Languages', value: 'indigenous', emoji: '🏞️' },
 ];
 
 const RegionSelection: React.FC<RegionSelectionProps> = ({ formData, updateFormData }) => {
@@ -103,7 +105,7 @@ const RegionSelection: React.FC<RegionSelectionProps> = ({ formData, updateFormD
   const [activeTab, setActiveTab] = useState<'regions' | 'languages'>('regions');
   const [searchTerm, setSearchTerm] = useState('');
   const [hoveredContinent, setHoveredContinent] = useState<string | null>(null);
-  const [activeContinent, setActiveContinent] = useState<string | null>(null);
+  const [expandedContinent, setExpandedContinent] = useState<string | null>(null);
 
   // Handle region selection
   const handleRegionSelect = (region: string) => {
@@ -187,12 +189,12 @@ const RegionSelection: React.FC<RegionSelectionProps> = ({ formData, updateFormD
       )
     : languageOptions;
 
-  // Handle continent selection for filtering
-  const handleContinentSelect = (continent: string) => {
-    if (activeContinent === continent) {
-      setActiveContinent(null);
+  // Toggle expanded continent
+  const toggleContinentExpand = (continentValue: string) => {
+    if (expandedContinent === continentValue) {
+      setExpandedContinent(null);
     } else {
-      setActiveContinent(continent);
+      setExpandedContinent(continentValue);
     }
   };
 
@@ -222,6 +224,15 @@ const RegionSelection: React.FC<RegionSelectionProps> = ({ formData, updateFormD
       color: "#1DB954", 
       borderColor: "#1DB954",
       transition: { duration: 0.2 } 
+    }
+  };
+
+  const subregionVariants = {
+    hidden: { height: 0, opacity: 0, overflow: "hidden" },
+    visible: { 
+      height: "auto", 
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
     }
   };
 
@@ -314,15 +325,20 @@ const RegionSelection: React.FC<RegionSelectionProps> = ({ formData, updateFormD
             Selected Regions: <span className={`font-bold ${selectedRegions.length === 3 ? 'text-[#1DB954]' : ''}`}>{selectedRegions.length}/3</span>
           </h3>
           
-          {/* Max regions reached animation */}
+          {/* Max regions reached animation - improved styling */}
           {showMaxReachedType === 'regions' && (
             <motion.div 
-              className="absolute -top-2 left-0 right-0 bg-[#ff4d4f]/20 text-[#ff4d4f] text-center py-2 rounded-lg"
-              initial={{ opacity: 0, y: -20 }}
+              className="mb-4 bg-[#ff4d4f]/10 border border-[#ff4d4f]/30 text-[#ff4d4f] text-center py-3 px-4 rounded-lg shadow-lg"
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
             >
-              Maximum of 3 regions reached! Remove one to add another.
+              <div className="flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                Maximum of 3 regions reached! Remove one to add another.
+              </div>
             </motion.div>
           )}
           
@@ -366,7 +382,7 @@ const RegionSelection: React.FC<RegionSelectionProps> = ({ formData, updateFormD
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                No regions selected yet. Explore the map below! ⬇️
+                No regions selected yet. Explore the options below! ⬇️
               </motion.span>
             )}
           </div>
@@ -377,15 +393,20 @@ const RegionSelection: React.FC<RegionSelectionProps> = ({ formData, updateFormD
             Selected Languages: <span className={`font-bold ${selectedLanguages.length === 3 ? 'text-[#1DB954]' : ''}`}>{selectedLanguages.length}/3</span>
           </h3>
           
-          {/* Max languages reached animation */}
+          {/* Max languages reached animation - improved styling */}
           {showMaxReachedType === 'languages' && (
             <motion.div 
-              className="absolute -top-2 left-0 right-0 bg-[#ff4d4f]/20 text-[#ff4d4f] text-center py-2 rounded-lg"
-              initial={{ opacity: 0, y: -20 }}
+              className="mb-4 bg-[#ff4d4f]/10 border border-[#ff4d4f]/30 text-[#ff4d4f] text-center py-3 px-4 rounded-lg shadow-lg"
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
             >
-              Maximum of 3 languages reached! Remove one to add another.
+              <div className="flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                Maximum of 3 languages reached! Remove one to add another.
+              </div>
             </motion.div>
           )}
           
@@ -436,88 +457,104 @@ const RegionSelection: React.FC<RegionSelectionProps> = ({ formData, updateFormD
         </div>
       )}
       
-      {/* Continent filters for regions */}
-      {activeTab === 'regions' && !searchTerm && (
-        <motion.div 
-          className="flex flex-wrap gap-2 mb-6"
-          variants={containerVariants}
-          initial="hidden" 
-          animate="visible"
-        >
-          {regionOptions.map(continent => (
-            <motion.button
-              key={continent.continent}
-              onClick={() => handleContinentSelect(continent.continent)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center ${
-                activeContinent === continent.continent
-                  ? 'bg-[#1DB954] text-white shadow-md shadow-[#1DB954]/20'
-                  : 'bg-[#282828] text-gray-300 hover:bg-[#333333]'
-              }`}
-              variants={itemVariants}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span className="mr-2">{continent.emoji}</span>
-              {continent.continent}
-            </motion.button>
-          ))}
-        </motion.div>
-      )}
-      
-      {/* Region list */}
+      {/* Region list with dropdown approach */}
       {activeTab === 'regions' && (
         <>
           {filteredRegionOptions.length > 0 ? (
             <motion.div 
-              className="space-y-8"
+              className="grid grid-cols-1 md:grid-cols-2 gap-6"
               variants={containerVariants}
               initial="hidden"
               animate="visible"
             >
               {filteredRegionOptions.map(continent => (
-                (!activeContinent || activeContinent === continent.continent) && (
-                  <motion.div 
-                    key={continent.continent}
-                    variants={itemVariants}
-                    className="bg-gradient-to-br from-[#282828] to-[#1A1A1A] p-5 rounded-xl shadow-md"
-                    onMouseEnter={() => setHoveredContinent(continent.continent)}
-                    onMouseLeave={() => setHoveredContinent(null)}
-                  >
-                    <h3 className="text-lg font-medium mb-4 flex items-center">
-                      <motion.span 
-                        className="text-xl mr-2"
-                        animate={hoveredContinent === continent.continent ? { scale: [1, 1.2, 1], rotate: [0, 10, 0] } : {}}
-                        transition={{ duration: 0.5 }}
-                      >
-                        {continent.emoji}
-                      </motion.span>
-                      {continent.continent}
-                    </h3>
-                    <motion.div 
-                      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
-                      variants={containerVariants}
+                <motion.div 
+                  key={continent.continent}
+                  variants={itemVariants}
+                  className={`bg-gradient-to-br from-[#282828] to-[#1A1A1A] p-5 rounded-xl shadow-md cursor-pointer`}
+                  onMouseEnter={() => setHoveredContinent(continent.continent)}
+                  onMouseLeave={() => setHoveredContinent(null)}
+                  onClick={() => toggleContinentExpand(continent.value)}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#333333] text-gray-400">
+                        <span className="text-xl">{continent.emoji}</span>
+                      </div>
+                      <div>
+                        <div className="text-lg font-medium">
+                          {continent.continent}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {continent.regions.length} regions
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click from triggering
+                        toggleContinentExpand(continent.value);
+                      }}
+                      className={`p-1 rounded-full transition-transform duration-300 ${expandedContinent === continent.value ? 'rotate-180' : ''}`}
+                      aria-label={`${expandedContinent === continent.value ? 'Collapse' : 'Expand'} regions`}
                     >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  {/* Regions dropdown */}
+                  <motion.div 
+                    className="ml-6 space-y-2 overflow-hidden"
+                    variants={subregionVariants}
+                    initial="hidden"
+                    animate={expandedContinent === continent.value ? "visible" : "hidden"}
+                    onClick={(e) => e.stopPropagation()} // Prevent clicks in dropdown from triggering card
+                  >
+                    <div className="grid grid-cols-2 gap-2 mt-2">
                       {continent.regions.map(region => (
-                        <motion.button
-                          key={region.value}
-                          type="button"
-                          onClick={() => handleRegionSelect(region.value)}
-                          className={`py-3 px-4 rounded-lg text-sm transition-all duration-200 flex items-center justify-center ${
-                            selectedRegions.includes(region.value)
-                              ? 'bg-[#1DB954] text-white shadow-md' 
-                              : 'bg-[#333333] text-gray-300 hover:bg-[#444444] hover:scale-105'
-                          }`}
-                          variants={itemVariants}
-                          whileHover={{ y: -5 }}
+                        <motion.div 
+                          key={`${continent.value}-${region.value}`} 
+                          className="flex items-center"
+                          whileHover={{ x: 5 }}
                           whileTap={{ scale: 0.95 }}
                         >
-                          <span className="text-xl mr-2">{region.emoji}</span>
-                          {region.name}
-                        </motion.button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent card click from triggering
+                              handleRegionSelect(region.value);
+                            }}
+                            className={`w-full px-3 py-2 rounded-lg text-left text-sm flex items-center space-x-2 transition-all duration-200 ${
+                              selectedRegions.includes(region.value)
+                                ? 'bg-[#1DB954]/30 text-white'
+                                : 'bg-[#333333] text-gray-300 hover:bg-[#444444]'
+                            }`}
+                          >
+                            {selectedRegions.includes(region.value) && (
+                              <motion.svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                className="h-4 w-4 flex-shrink-0" 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: "spring", stiffness: 500 }}
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </motion.svg>
+                            )}
+                            <span className="mr-2 text-xl">{region.emoji}</span>
+                            <span>{region.name}</span>
+                          </button>
+                        </motion.div>
                       ))}
-                    </motion.div>
+                    </div>
                   </motion.div>
-                )
+                </motion.div>
               ))}
             </motion.div>
           ) : (

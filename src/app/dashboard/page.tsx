@@ -352,7 +352,7 @@ export default function DashboardPage() {
             </Link>
           </motion.div>
           <motion.div 
-            className="flex items-center space-x-4"
+            className="flex items-center space-x-6"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -362,14 +362,13 @@ export default function DashboardPage() {
               href="/create-playlist" 
               variant="primary"
               size="md"
+              className="rounded-full w-12 h-12 flex items-center justify-center p-0"
               icon={
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               }
-            >
-              Create Playlist
-            </Button>
+            />
           </motion.div>
         </div>
       </motion.header>
@@ -579,7 +578,7 @@ export default function DashboardPage() {
                   transition={{ duration: 0.5, delay: 0.5 }}
                 >
                   <Link href="/create-playlist">
-                    <Button
+                    <Button 
                       variant="primary"
                       size="lg"
                       icon={
@@ -588,7 +587,7 @@ export default function DashboardPage() {
                         </svg>
                       }
                     >
-                      Create New Playlist
+                      Create Playlist
                     </Button>
                   </Link>
                 </motion.div>
@@ -718,7 +717,7 @@ function RecentPlaylists() {
         console.log('Fetching recent playlists...');
       }
       
-      const response = await fetch('/api/playlists?limit=8', { 
+      const response = await fetch('/api/playlists?limit=6', { 
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache' }
       });
@@ -778,8 +777,8 @@ function RecentPlaylists() {
   
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {[...Array(8)].map((_, index) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
+        {[...Array(6)].map((_, index) => (
           <div key={index} className="bg-[#181818]/50 rounded-xl h-64 animate-pulse"></div>
         ))}
       </div>
@@ -813,7 +812,15 @@ function RecentPlaylists() {
         <h3 className="text-xl font-medium mb-2">No Playlists Yet</h3>
         <p className="text-[#A3A3A3] mb-6">Create your first playlist to see it here</p>
         <Link href="/create-playlist">
-          <Button variant="primary">Create a Playlist</Button>
+          <Button 
+            variant="primary"
+            size="md"
+            icon={
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            }
+          />
         </Link>
       </div>
     );
@@ -886,11 +893,11 @@ function RecentPlaylists() {
     );
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {playlists.map((playlist, index) => (
           <React.Fragment key={playlist.id}>
             <PlaylistCard playlist={playlist} />
-            {index === 1 && !error && (
+            {index === 2 && !error && (
               <ConditionalAdDisplay>
                 <AdBanner variant="card" className="flex items-center justify-center" />
               </ConditionalAdDisplay>

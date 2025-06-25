@@ -4,6 +4,7 @@ import EraSelection from './EraSelection';
 import RegionSelection from './RegionSelection';
 import PlaylistDetails from './PlaylistDetails';
 import Review from './Review';
+import UserPrompt from './UserPrompt';
 
 export {
   GenreSelection,
@@ -11,5 +12,6 @@ export {
   EraSelection,
   RegionSelection,
   PlaylistDetails,
-  Review
+  Review,
+  UserPrompt
 }; 

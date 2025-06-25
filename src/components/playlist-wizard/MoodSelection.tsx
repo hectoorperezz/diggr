@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlaylistFormData } from '@/app/create-playlist/page';
 import { motion } from 'framer-motion';
 
@@ -7,17 +7,15 @@ interface MoodSelectionProps {
   updateFormData: (field: keyof PlaylistFormData, value: any) => void;
 }
 
-// List of mood options with emojis
+// Simplified list of mood options with emojis - reduced to 3 categories
 const moodOptions = [
   {
-    category: 'Energy',
+    category: 'Tempo',
     icon: '⚡',
     moods: [
-      { name: 'Energetic', value: 'energetic', emoji: '💪' },
-      { name: 'Relaxed', value: 'relaxed', emoji: '😌' },
-      { name: 'Calm', value: 'calm', emoji: '🧘' },
-      { name: 'Intense', value: 'intense', emoji: '🔥' },
-      { name: 'Mellow', value: 'mellow', emoji: '🌊' },
+      { name: 'Downtempo', value: 'downtempo', emoji: '⬇️' },
+      { name: 'Midtempo', value: 'midtempo', emoji: '➡️' },
+      { name: 'Upbeat', value: 'upbeat', emoji: '⬆️' },
     ]
   },
   {
@@ -26,23 +24,8 @@ const moodOptions = [
     moods: [
       { name: 'Happy', value: 'happy', emoji: '😊' },
       { name: 'Sad', value: 'sad', emoji: '😢' },
-      { name: 'Angry', value: 'angry', emoji: '😠' },
       { name: 'Nostalgic', value: 'nostalgic', emoji: '🕰️' },
       { name: 'Romantic', value: 'romantic', emoji: '💘' },
-      { name: 'Melancholic', value: 'melancholic', emoji: '🥀' },
-    ]
-  },
-  {
-    category: 'Atmosphere',
-    icon: '🌈',
-    moods: [
-      { name: 'Dreamy', value: 'dreamy', emoji: '✨' },
-      { name: 'Dark', value: 'dark', emoji: '🌙' },
-      { name: 'Uplifting', value: 'uplifting', emoji: '🎈' },
-      { name: 'Ethereal', value: 'ethereal', emoji: '🌌' },
-      { name: 'Gritty', value: 'gritty', emoji: '🧱' },
-      { name: 'Spacey', value: 'spacey', emoji: '🚀' },
-      { name: 'Atmospheric', value: 'atmospheric', emoji: '☁️' },
     ]
   },
   {
@@ -50,61 +33,80 @@ const moodOptions = [
     icon: '🏙️',
     moods: [
       { name: 'Party', value: 'party', emoji: '🎉' },
-      { name: 'Study', value: 'study', emoji: '📚' },
-      { name: 'Workout', value: 'workout', emoji: '🏋️' },
       { name: 'Focus', value: 'focus', emoji: '🎯' },
+      { name: 'Workout', value: 'workout', emoji: '🏋️' },
       { name: 'Chill', value: 'chill', emoji: '🛋️' },
-      { name: 'Driving', value: 'driving', emoji: '🚗' },
-      { name: 'Background', value: 'background', emoji: '🎧' },
-    ]
-  },
-  {
-    category: 'Tempo',
-    icon: '⏱️',
-    moods: [
-      { name: 'Fast', value: 'fast', emoji: '⚡' },
-      { name: 'Slow', value: 'slow', emoji: '🐢' },
-      { name: 'Moderate', value: 'moderate', emoji: '➡️' },
-      { name: 'Upbeat', value: 'upbeat', emoji: '⬆️' },
-      { name: 'Downtempo', value: 'downtempo', emoji: '⬇️' },
     ]
   }
 ];
 
 const MoodSelection: React.FC<MoodSelectionProps> = ({ formData, updateFormData }) => {
-  const [selectedMoods, setSelectedMoods] = useState<string[]>(formData.moods);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-
+  // Track selected moods by category
+  const [selectedMoodsByCategory, setSelectedMoodsByCategory] = useState<Record<string, string | null>>({
+    'Tempo': null,
+    'Emotion': null,
+    'Setting': null
+  });
+  
+  // Initialize from formData
+  useEffect(() => {
+    const initialMoodsByCategory: Record<string, string | null> = {
+      'Tempo': null,
+      'Emotion': null,
+      'Setting': null
+    };
+    
+    formData.moods.forEach(mood => {
+      // Find which category this mood belongs to
+      for (const category of moodOptions) {
+        const found = category.moods.find(m => m.value === mood);
+        if (found) {
+          initialMoodsByCategory[category.category] = mood;
+          break;
+        }
+      }
+    });
+    
+    setSelectedMoodsByCategory(initialMoodsByCategory);
+  }, [formData.moods]);
+  
+  // Derived state for all selected moods
+  const selectedMoods = Object.values(selectedMoodsByCategory).filter(Boolean) as string[];
+  
+  // Find which category a mood belongs to
+  const findMoodCategory = (moodValue: string): string | null => {
+    for (const category of moodOptions) {
+      if (category.moods.some(m => m.value === moodValue)) {
+        return category.category;
+      }
+    }
+    return null;
+  };
+  
   // Handle mood selection
   const handleMoodSelect = (mood: string) => {
-    let updatedMoods: string[];
+    // Find which category this mood belongs to
+    const category = findMoodCategory(mood);
+    if (!category) return;
     
-    if (selectedMoods.includes(mood)) {
-      updatedMoods = selectedMoods.filter(m => m !== mood);
+    const updatedMoodsByCategory = { ...selectedMoodsByCategory };
+    
+    // If already selected, deselect it
+    if (selectedMoodsByCategory[category] === mood) {
+      updatedMoodsByCategory[category] = null;
     } else {
-      // Limit to 5 moods maximum
-      if (selectedMoods.length >= 5) {
-        // Use a more engaging approach than an alert
-        showMaxMoodsReached();
-        return;
-      }
-      updatedMoods = [...selectedMoods, mood];
+      // Otherwise, select it (replacing any previous selection in this category)
+      updatedMoodsByCategory[category] = mood;
     }
     
-    setSelectedMoods(updatedMoods);
-    updateFormData('moods', updatedMoods);
+    setSelectedMoodsByCategory(updatedMoodsByCategory);
+    
+    // Update the form data with all selected moods
+    const allSelectedMoods = Object.values(updatedMoodsByCategory).filter(Boolean) as string[];
+    updateFormData('moods', allSelectedMoods);
   };
 
-  // Show max moods reached animation/notification
-  const [showMaxReached, setShowMaxReached] = useState(false);
-  
-  const showMaxMoodsReached = () => {
-    setShowMaxReached(true);
-    setTimeout(() => {
-      setShowMaxReached(false);
-    }, 2000);
-  };
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Filter moods based on search term
   const filteredMoodOptions = searchTerm
@@ -145,20 +147,11 @@ const MoodSelection: React.FC<MoodSelectionProps> = ({ formData, updateFormData 
     }
   };
 
-  const categoryVariants = {
-    hidden: { opacity: 0, y: -10 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { type: "spring", stiffness: 300, damping: 24 }
-    }
-  };
-
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Set the Mood 🎭</h2>
       <p className="text-gray-400 mb-6">
-        Choose up to 5 moods to define the emotional tone of your playlist.
+        Select one mood from each category to define your playlist's emotional tone.
       </p>
       
       {/* Search box */}
@@ -188,19 +181,7 @@ const MoodSelection: React.FC<MoodSelectionProps> = ({ formData, updateFormData 
       
       {/* Selected moods */}
       <div className="mb-8 relative">
-        <h3 className="text-sm font-medium text-gray-400 mb-3">Selected Moods: <span className={`font-bold ${selectedMoods.length === 5 ? 'text-[#1DB954]' : ''}`}>{selectedMoods.length}/5</span></h3>
-        
-        {/* Max moods reached animation */}
-        {showMaxReached && (
-          <motion.div 
-            className="absolute -top-2 left-0 right-0 bg-[#ff4d4f]/20 text-[#ff4d4f] text-center py-2 rounded-lg"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-          >
-            Maximum of 5 moods reached! Remove one to add another.
-          </motion.div>
-        )}
+        <h3 className="text-sm font-medium text-gray-400 mb-3">Selected Moods:</h3>
         
         <div className="flex flex-wrap gap-2">
           {selectedMoods.length > 0 ? (
@@ -213,6 +194,9 @@ const MoodSelection: React.FC<MoodSelectionProps> = ({ formData, updateFormData 
               {selectedMoods.map(mood => {
                 // Find the mood object
                 const moodObject = findMood(mood);
+                // Find the category
+                const category = findMoodCategory(mood);
+                
                 return (
                   <motion.span 
                     key={mood} 
@@ -223,7 +207,7 @@ const MoodSelection: React.FC<MoodSelectionProps> = ({ formData, updateFormData 
                     whileTap={{ scale: 0.95 }}
                   >
                     <span className="mr-2 text-xl">{moodObject?.emoji}</span>
-                    {moodObject?.name || mood}
+                    <span className="opacity-75 mr-1">{category}:</span> {moodObject?.name || mood}
                     <button
                       type="button"
                       className="ml-2 inline-flex items-center transition-all duration-200 hover:rotate-90"
@@ -249,89 +233,62 @@ const MoodSelection: React.FC<MoodSelectionProps> = ({ formData, updateFormData 
         </div>
       </div>
       
-      {/* Category tabs */}
-      {!searchTerm && (
-        <motion.div 
-          className="flex flex-wrap gap-2 mb-6"
-          variants={containerVariants}
-          initial="hidden" 
-          animate="visible"
-        >
-          {moodOptions.map(category => (
-            <motion.button
-              key={category.category}
-              onClick={() => setActiveCategory(activeCategory === category.category ? null : category.category)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center ${
-                activeCategory === category.category
-                  ? 'bg-[#1DB954] text-white shadow-md shadow-[#1DB954]/20'
-                  : 'bg-[#282828] text-gray-300 hover:bg-[#333333]'
-              }`}
-              variants={categoryVariants}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span className="mr-2">{category.icon}</span>
-              {category.category}
-            </motion.button>
-          ))}
-        </motion.div>
-      )}
-      
       {/* Mood categories */}
       {filteredMoodOptions.length > 0 ? (
         <motion.div 
-          className="space-y-8"
+          className="space-y-6"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
           {filteredMoodOptions.map(category => (
-            (!activeCategory || activeCategory === category.category) && (
+            <motion.div 
+              key={category.category}
+              variants={itemVariants}
+              className="bg-gradient-to-br from-[#282828] to-[#1A1A1A] p-5 rounded-xl shadow-md"
+            >
+              <h3 className="text-lg font-medium mb-4 flex items-center">
+                <span className="text-xl mr-2">{category.icon}</span>
+                {category.category}
+                {selectedMoodsByCategory[category.category] && (
+                  <span className="ml-2 text-xs bg-[#1DB954]/20 text-[#1DB954] px-2 py-1 rounded-full">
+                    Selected
+                  </span>
+                )}
+              </h3>
               <motion.div 
-                key={category.category}
-                variants={itemVariants}
-                className="bg-gradient-to-br from-[#282828] to-[#1A1A1A] p-5 rounded-xl shadow-md"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
+                variants={containerVariants}
               >
-                <h3 className="text-lg font-medium mb-4 flex items-center">
-                  <span className="text-xl mr-2">{category.icon}</span>
-                  {category.category}
-                </h3>
-                <motion.div 
-                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
-                  variants={containerVariants}
-                >
-                  {category.moods.map(mood => (
-                    <motion.button
-                      key={mood.value}
-                      type="button"
-                      onClick={() => handleMoodSelect(mood.value)}
-                      className={`py-3 px-4 rounded-lg text-sm transition-all duration-200 flex flex-col items-center justify-center ${
-                        selectedMoods.includes(mood.value)
-                          ? 'bg-[#1DB954] text-white shadow-md' 
-                          : 'bg-[#333333] text-gray-300 hover:bg-[#444444] hover:scale-105'
-                      }`}
-                      variants={itemVariants}
-                      whileHover={{ y: -5 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <span className="text-2xl mb-1">{mood.emoji}</span>
-                      {mood.name}
-                    </motion.button>
-                  ))}
-                </motion.div>
+                {category.moods.map(mood => (
+                  <motion.button
+                    key={mood.value}
+                    type="button"
+                    onClick={() => handleMoodSelect(mood.value)}
+                    className={`py-3 px-4 rounded-lg text-sm transition-all duration-200 flex flex-col items-center justify-center ${
+                      selectedMoodsByCategory[category.category] === mood.value
+                        ? 'bg-[#1DB954] text-white shadow-md' 
+                        : 'bg-[#333333] text-gray-300 hover:bg-[#444444] hover:scale-105'
+                    }`}
+                    variants={itemVariants}
+                    whileHover={{ y: -5 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <span className="text-2xl mb-1">{mood.emoji}</span>
+                    {mood.name}
+                  </motion.button>
+                ))}
               </motion.div>
-            )
+            </motion.div>
           ))}
         </motion.div>
       ) : (
-        <motion.div 
-          className="text-center py-12"
+        <motion.div
+          className="text-center py-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
-          <span className="text-6xl mb-4 block">🔍</span>
-          <p className="text-gray-400 text-lg">No moods found matching "{searchTerm}"</p>
-          <p className="text-gray-500 mt-2">Try a different search term</p>
+          <p className="text-gray-400">No moods match your search.</p>
         </motion.div>
       )}
     </div>

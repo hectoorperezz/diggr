@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { refreshAccessToken, createPlaylist, addTracksToPlaylist, getCurrentUser, uploadPlaylistCover, getPlaylist } from '@/lib/spotify/client';
+import { refreshAccessToken, createPlaylist, addTracksToPlaylist, getCurrentUser, getPlaylist } from '@/lib/spotify/client';
 import { canCreateMorePlaylists } from '@/lib/stripe/subscription';
 
 export async function POST(request: NextRequest) {
@@ -16,8 +16,7 @@ export async function POST(request: NextRequest) {
       name,
       description,
       isPublic,
-      tracks,
-      coverImage // Optional base64 image data
+      tracks
     } = body;
 
     // Validate required fields
@@ -107,31 +106,14 @@ export async function POST(request: NextRequest) {
     await addTracksToPlaylist(playlist.id, accessToken, trackUris);
     console.log('Tracks added to playlist successfully');
     
-    // Upload cover image if provided
-    let updatedImageUrl: string | null = null;
-    if (coverImage) {
-      try {
-        console.log('Uploading custom cover image');
-        await uploadPlaylistCover(playlist.id, accessToken, coverImage);
-        
-        // Get the updated playlist to get the new image URL
-        const updatedPlaylist = await getPlaylist(playlist.id, accessToken);
-        updatedImageUrl = updatedPlaylist.images && updatedPlaylist.images.length > 0 
-          ? updatedPlaylist.images[0].url 
-          : null;
-          
-        console.log('Cover image uploaded successfully');
-      } catch (coverError) {
-        console.error('Error uploading cover image:', coverError);
-        // Continue with playlist creation even if cover upload fails
-      }
-    }
-
+    // Get the image URL from Spotify
+    const updatedPlaylist = await getPlaylist(playlist.id, accessToken);
+    const imageUrl = updatedPlaylist.images && updatedPlaylist.images.length > 0 
+      ? updatedPlaylist.images[0].url 
+      : null;
+      
     // Prepare data for database insert
     // Ensure boolean fields are properly typed
-    const imageUrl: string | null = updatedImageUrl || 
-      (playlist.images && playlist.images.length > 0 ? playlist.images[0].url : null);
-      
     const playlistData = {
       user_id: session.user.id,
       spotify_playlist_id: playlist.id,

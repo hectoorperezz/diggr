@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 
 interface ButtonProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   onClick?: () => void;
   href?: string;
   variant?: 'primary' | 'secondary' | 'outline' | 'danger';
@@ -76,18 +76,21 @@ export default function Button({
           padding: 'px-5 py-2.5',
           text: 'text-sm',
           iconSize: 'w-4 h-4',
+          iconMargin: 'mx-2',
         };
       case 'lg':
         return {
           padding: 'px-10 py-4',
           text: 'text-lg',
           iconSize: 'w-6 h-6',
+          iconMargin: 'mx-3',
         };
       default:
         return {
           padding: 'px-8 py-3',
           text: 'text-base',
           iconSize: 'w-5 h-5',
+          iconMargin: 'mx-2.5',
         };
     }
   };
@@ -95,14 +98,42 @@ export default function Button({
   const variantStyles = getVariantStyles();
   const sizeStyles = getSizeStyles();
   
+  // Determine if this is an icon-only button
+  const isIconOnly = icon && !children;
+  
   const buttonContent = (
     <>
       <div className={`absolute inset-0 ${variantStyles.bg} ${variantStyles.hoverBg} transition-transform duration-300`}></div>
       <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
-      <span className={`relative z-20 flex items-center justify-center w-full ${variantStyles.textColor} ${sizeStyles.text} font-medium ${sizeStyles.padding}`}>
-        {icon && iconPosition === 'left' && <span className={`${sizeStyles.iconSize} mr-2 flex-shrink-0`}>{icon}</span>}
-        <span className="whitespace-nowrap">{children}</span>
-        {icon && iconPosition === 'right' && <span className={`${sizeStyles.iconSize} ml-2 flex-shrink-0`}>{icon}</span>}
+      <span className={`
+        relative z-20 
+        flex items-center justify-center 
+        w-full 
+        ${variantStyles.textColor} 
+        ${sizeStyles.text} 
+        font-medium 
+        ${className.includes('p-0') ? '' : sizeStyles.padding}
+        ${isIconOnly ? 'p-0' : ''}
+      `}>
+        {icon && iconPosition === 'left' && (
+          <span className={`
+            ${sizeStyles.iconSize} 
+            flex-shrink-0
+            ${children ? 'mr-3' : ''}
+          `}>
+            {icon}
+          </span>
+        )}
+        {children && <span className="whitespace-nowrap overflow-hidden text-ellipsis">{children}</span>}
+        {icon && iconPosition === 'right' && (
+          <span className={`
+            ${sizeStyles.iconSize} 
+            flex-shrink-0
+            ${children ? 'ml-3' : ''}
+          `}>
+            {icon}
+          </span>
+        )}
       </span>
     </>
   );
