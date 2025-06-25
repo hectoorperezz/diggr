@@ -356,19 +356,19 @@ export default function CreatePlaylistPage() {
   const getCreationEmoji = () => {
     switch (creationStep) {
       case 'generating':
-        return '🧠';
+        return <span className="inline-block transform scale-90 sm:scale-100">🧠</span>;
       case 'finding_tracks':
-        return '🔍';
+        return <span className="inline-block transform scale-90 sm:scale-100">🔍</span>;
       case 'creating_playlist':
-        return '🎵';
+        return <span className="inline-block transform scale-90 sm:scale-100">🎵</span>;
       case 'finalizing':
-        return '🖼️';
+        return <span className="inline-block transform scale-90 sm:scale-100">🖼️</span>;
       case 'complete':
-        return '✅';
+        return <span className="inline-block transform scale-90 sm:scale-100">✅</span>;
       case 'error':
-        return '❌';
+        return <span className="inline-block transform scale-90 sm:scale-100">❌</span>;
       default:
-        return '⏳';
+        return <span className="inline-block transform scale-90 sm:scale-100">⏳</span>;
     }
   };
 
@@ -579,20 +579,20 @@ export default function CreatePlaylistPage() {
               animate="visible"
               exit="exit"
               variants={pageVariants}
-              className="min-h-[50vh]"
+              className="min-h-[40vh] sm:min-h-[50vh]"
             >
               <div className="relative">
                 <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#1DB954]/30 via-purple-500/20 to-[#1DB954]/30 opacity-60 blur-lg -z-10"></div>
                 <motion.div 
-                  className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-md border border-white/5 p-8 rounded-2xl"
+                  className="relative bg-[#181818]/80 backdrop-filter backdrop-blur-md border border-white/5 p-4 sm:p-8 rounded-2xl"
                   whileHover={{ boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   {isLoading ? (
-                    <div className="py-12">
-                      <div className="text-center mb-10">
+                    <div className="py-6 sm:py-12">
+                      <div className="text-center mb-6 sm:mb-10">
                         <motion.div 
-                          className="text-7xl mb-8"
+                          className="text-5xl sm:text-7xl mb-4 sm:mb-8"
                           animate={{ 
                             scale: [1, 1.2, 1],
                             rotate: [0, 5, 0, -5, 0],
@@ -606,13 +606,13 @@ export default function CreatePlaylistPage() {
                           {getCreationEmoji()}
                         </motion.div>
                         <motion.h1 
-                          className="text-3xl font-bold mb-4"
+                          className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4"
                           animate={{ opacity: [0.8, 1, 0.8] }}
                           transition={{ duration: 2, repeat: Infinity }}
                         >
                           {getCreationMessage()}
                         </motion.h1>
-                        <p className="text-lg text-[#A3A3A3] max-w-lg mx-auto">
+                        <p className="text-base sm:text-lg text-[#A3A3A3] max-w-lg mx-auto">
                           {creationStep === 'generating' && 'Our AI is crafting the perfect playlist for you'}
                           {creationStep === 'finding_tracks' && 'Searching Spotify for the best matches'}
                           {creationStep === 'creating_playlist' && 'Almost there! Adding tracks to your Spotify account'}
@@ -622,7 +622,7 @@ export default function CreatePlaylistPage() {
                         </p>
                       </div>
                       
-                      <div className="relative h-10 w-full max-w-2xl mx-auto bg-[#121212] rounded-full mb-10 overflow-hidden">
+                      <div className="relative h-8 sm:h-10 w-full max-w-2xl mx-auto bg-[#121212] rounded-full mb-6 sm:mb-10 overflow-hidden">
                         <motion.div 
                           className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1DB954] to-purple-500 rounded-full"
                           initial={{ width: "0%" }}
@@ -630,19 +630,19 @@ export default function CreatePlaylistPage() {
                           transition={{ duration: 0.8 }}
                         />
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-base font-medium text-white">{Math.round(creationProgress)}%</span>
+                          <span className="text-sm sm:text-base font-medium text-white">{Math.round(creationProgress)}%</span>
                         </div>
                       </div>
                       
                       {/* Animated music notes */}
-                      <div className="relative h-32 max-w-2xl mx-auto">
-                        {[...Array(7)].map((_, i) => (
+                      <div className="relative h-20 sm:h-32 max-w-2xl mx-auto">
+                        {[...Array(5)].map((_, i) => (
                           <motion.div
                             key={i}
-                            className={`absolute text-[#1DB954]/50 text-${i % 2 === 0 ? '3xl' : '2xl'}`}
+                            className={`absolute text-[#1DB954]/50 text-${i % 2 === 0 ? '2xl' : 'xl'} sm:text-${i % 2 === 0 ? '3xl' : '2xl'}`}
                             initial={{ 
                               bottom: 0,
-                              left: `${10 + i * 12}%`,
+                              left: `${10 + i * 15}%`,
                               opacity: 0,
                               scale: 0.5,
                             }}
