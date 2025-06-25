@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import CheckoutButton from '@/components/stripe/CheckoutButton';
 
 interface VideoAdComponentProps {
   onAdComplete?: () => void;
@@ -307,14 +308,11 @@ const VideoAdComponent: React.FC<VideoAdComponentProps> = ({
           </motion.div>
           
           {/* CTA Button */}
-          <motion.a
-            href="/pricing"
+          <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="relative overflow-hidden group rounded-full"
+            className="relative"
             onClick={(e) => {
               // Track conversion click in analytics
               if (window.gtag) {
@@ -325,11 +323,13 @@ const VideoAdComponent: React.FC<VideoAdComponentProps> = ({
               }
             }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954] to-purple-500 group-hover:scale-105 transition-transform duration-300"></div>
-            <span className="relative bg-black/30 backdrop-blur-sm m-[2px] px-8 py-3 rounded-full inline-block font-medium text-white">
-              Get Premium Now
-            </span>
-          </motion.a>
+            <CheckoutButton
+              returnUrl={typeof window !== 'undefined' ? window.location.origin + '/settings' : ''}
+              buttonText="Get Premium Now"
+              variant="primary"
+              className="relative overflow-hidden group rounded-full bg-gradient-to-r from-[#1DB954] to-purple-500 hover:scale-105 transition-transform duration-300"
+            />
+          </motion.div>
           
           {/* Progress bar */}
           <motion.div 

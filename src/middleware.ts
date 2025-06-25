@@ -51,6 +51,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // If the user is authenticated and visiting the landing page, redirect to dashboard
+  if (session && req.nextUrl.pathname === '/') {
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = '/dashboard';
+    return NextResponse.redirect(redirectUrl);
+  }
+
   // Early check: if Supabase returned an email-verification error from any provider
   const errorCodeParam = req.nextUrl.searchParams.get('error_code');
   const errorDescriptionParam = req.nextUrl.searchParams.get('error_description');

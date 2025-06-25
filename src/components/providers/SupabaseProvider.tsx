@@ -579,7 +579,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       // Pequeña pausa para asegurar que todo se limpie correctamente
       setTimeout(() => {
         // Forzar limpieza completa con reload en lugar de navegación simple
-        window.location.href = '/';
+        window.location.href = '/auth/login';
       }, 100);
     } catch (error) {
       console.error('Sign out error:', error);

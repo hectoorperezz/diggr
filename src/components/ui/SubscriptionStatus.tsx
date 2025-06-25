@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useSupabase } from '@/components/providers/SupabaseProvider';
 import { motion } from 'framer-motion';
 import { getUserQuota } from '@/lib/stripe/subscription';
+import CheckoutButton from '@/components/stripe/CheckoutButton';
 
 export default function SubscriptionStatus() {
   const { user } = useSupabase();
@@ -83,18 +84,12 @@ export default function SubscriptionStatus() {
 
   if (!quota) {
     return (
-      <Link href="/pricing">
-        <motion.div
-          className="px-3 py-1 rounded-full bg-black/20 text-xs text-white flex items-center cursor-pointer hover:bg-black/30 transition-colors"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          Free Plan
-        </motion.div>
-      </Link>
+      <CheckoutButton
+        returnUrl={typeof window !== 'undefined' ? window.location.href : ''}
+        buttonText="Free Plan"
+        variant="outline"
+        className="px-3 py-1 rounded-full bg-black/20 text-xs text-white hover:bg-black/30 transition-colors"
+      />
     );
   }
 
@@ -103,29 +98,26 @@ export default function SubscriptionStatus() {
   const playlistLimit = quota.playlistLimit || 5;
 
   return (
-    <Link href="/pricing">
-      <motion.div
-        className={`px-3 py-1 rounded-full flex items-center gap-2 cursor-pointer transition-colors ${
-          isPremium
-            ? 'bg-gradient-to-r from-[#1DB954]/80 to-purple-500/80 text-white hover:from-[#1DB954] hover:to-purple-500'
-            : 'bg-black/20 text-white hover:bg-black/30'
-        }`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <span className="text-xs font-medium">
-          {isPremium ? 'Pro Plan' : 'Free Plan'}
-        </span>
-        
-        {!isPremium && (
-          <span className="text-xs">
-            {playlistsCreated}/{playlistLimit}
-          </span>
-        )}
-      </motion.div>
-    </Link>
+    isPremium ? (
+      <Link href="/pricing">
+        <motion.div
+          className="px-3 py-1 rounded-full bg-gradient-to-r from-[#1DB954]/80 to-purple-500/80 text-white hover:from-[#1DB954] hover:to-purple-500 flex items-center gap-2 cursor-pointer transition-colors"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <span className="text-xs font-medium">Pro Plan</span>
+        </motion.div>
+      </Link>
+    ) : (
+      <CheckoutButton
+        returnUrl={typeof window !== 'undefined' ? window.location.href : ''}
+        buttonText={`Free Plan ${playlistsCreated}/${playlistLimit}`}
+        variant="outline"
+        className="px-3 py-1 rounded-full bg-black/20 text-xs text-white hover:bg-black/30 transition-colors"
+      />
+    )
   );
 } 

@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import Button from '@/components/ui/Button';
 import AdBanner from '@/components/ads/AdBanner';
+import CheckoutButton from '@/components/stripe/CheckoutButton';
 
 // SearchParamsHandler is a small component that just handles the searchParams
 // and passes the data to its parent through a callback
@@ -641,13 +642,11 @@ export default function SettingsPage() {
                         Manage Subscription
                       </Button>
                     ) : (
-                      <Button 
-                        href="/pricing"
+                      <CheckoutButton 
+                        returnUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/settings`}
                         variant="primary"
                         size="md"
-                      >
-                        Upgrade to Pro
-                      </Button>
+                      />
                     )}
                   </div>
                 </div>
