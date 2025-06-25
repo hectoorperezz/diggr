@@ -382,11 +382,11 @@ export default function DashboardPage() {
           transition={{ duration: 0.5 }}
         >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-            <motion.h1 
-              className="text-4xl font-bold bg-gradient-to-r from-white via-[#1DB954] to-purple-400 text-transparent bg-clip-text"
+            <motion.h1
+              className="text-4xl font-bold mb-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
             >
               Welcome back, {user?.email?.split('@')[0] || 'there'}!
             </motion.h1>
@@ -395,6 +395,7 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
+              className="mb-4"
             >
               <Link href="/settings">
                 <Button variant="outline" size="sm" icon={

@@ -13,6 +13,8 @@ interface ButtonProps {
   fullWidth?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
+  target?: string;
+  rel?: string;
 }
 
 export default function Button({
@@ -26,6 +28,8 @@ export default function Button({
   fullWidth = false,
   icon,
   iconPosition = 'left',
+  target,
+  rel,
 }: ButtonProps) {
   // Define variant styles
   const getVariantStyles = () => {
@@ -119,7 +123,7 @@ export default function Button({
           <span className={`
             ${sizeStyles.iconSize} 
             flex-shrink-0
-            ${children ? 'mr-3' : ''}
+            ${children ? 'mr-2 sm:mr-3' : ''}
           `}>
             {icon}
           </span>
@@ -129,7 +133,7 @@ export default function Button({
           <span className={`
             ${sizeStyles.iconSize} 
             flex-shrink-0
-            ${children ? 'ml-3' : ''}
+            ${children ? 'ml-2 sm:ml-3' : ''}
           `}>
             {icon}
           </span>
@@ -145,7 +149,13 @@ export default function Button({
         whileHover={disabled ? {} : { scale: 1.03 }}
         whileTap={disabled ? {} : { scale: 0.97 }}
       >
-        <Link href={disabled ? '#' : href} className={`relative group overflow-hidden ${fullWidth ? 'w-full block' : 'inline-block'} rounded-full ${className}`} onClick={disabled ? (e) => e.preventDefault() : undefined}>
+        <Link 
+          href={disabled ? '#' : href} 
+          className={`relative group overflow-hidden ${fullWidth ? 'w-full block' : 'inline-block'} rounded-full ${className}`} 
+          onClick={disabled ? (e) => e.preventDefault() : undefined}
+          target={target}
+          rel={rel}
+        >
           {buttonContent}
         </Link>
       </motion.div>

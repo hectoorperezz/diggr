@@ -782,31 +782,19 @@ export default function SettingsPage() {
               </motion.div>
             </motion.div>
             
-            {/* Back to Dashboard Button */}
-            <motion.div
+            {/* Bottom actions section */}
+            <motion.div 
               className="flex justify-center mt-8"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <div className="flex space-x-4">
-                <Button 
-                  href="/dashboard" 
-                  variant="outline"
-                  size="lg"
-                  icon={
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 12L5 10M5 10L12 3L19 10M5 10V20C5 20.5523 5.44772 21 6 21H9M19 10L21 12M19 10V20C19 20.5523 18.5523 21 18 21H15M9 21C9.55228 21 10 20.5523 10 20V16C10 15.4477 10.4477 15 11 15H13C13.5523 15 14 15.4477 14 16V20C14 20.5523 14.4477 21 15 21M9 21H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  }
-                >
-                  Back to Dashboard
-                </Button>
-                
+              <div className="flex flex-col w-full max-w-xs gap-4 pb-20">
                 <Button 
                   onClick={handleSignOut}
                   variant="danger"
                   size="lg"
+                  fullWidth
                   icon={
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M17 16L21 12M21 12L17 8M21 12H9M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -815,11 +803,12 @@ export default function SettingsPage() {
                 >
                   Log Out
                 </Button>
-
+                
                 <Button 
                   href="/settings/delete-account"
                   variant="danger"
                   size="lg"
+                  fullWidth
                   icon={
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
