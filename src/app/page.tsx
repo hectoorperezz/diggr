@@ -79,16 +79,22 @@ export default function Home() {
             
             {/* Show either Login/Sign Up buttons or Access button based on authentication state */}
             {isClient && !isLoading && session ? (
-              <Link href="/dashboard" className="btn-primary text-sm md:text-base">
-                Access
+              <Link href="/dashboard" className="group relative overflow-hidden rounded-full inline-block">
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
+                <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                <span className="relative z-20 px-6 py-2.5 inline-block font-medium text-white text-sm md:text-base">Access</span>
               </Link>
             ) : (
               <>
-                <Link href="/auth/login" className="btn-outline text-sm md:text-base">
-                  Login
+                <Link href="/auth/login" className="group relative overflow-hidden rounded-full inline-block">
+                  <div className="absolute inset-0 w-full h-full bg-white/10 group-hover:bg-white/15 group-hover:scale-105 transition-all duration-300"></div>
+                  <div className="absolute inset-[2px] rounded-full bg-black/80 group-hover:bg-black/75 backdrop-blur-xl z-10 transition-all duration-300"></div>
+                  <span className="relative z-20 px-6 py-2.5 inline-block font-medium text-white text-sm md:text-base">Login</span>
                 </Link>
-                <Link href="/auth/register" className="btn-primary text-sm md:text-base">
-                  Sign Up
+                <Link href="/auth/register" className="group relative overflow-hidden rounded-full inline-block">
+                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
+                  <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                  <span className="relative z-20 px-6 py-2.5 inline-block font-medium text-white text-sm md:text-base">Sign Up</span>
                 </Link>
               </>
             )}
@@ -97,69 +103,242 @@ export default function Home() {
       </motion.header>
 
       {/* Hero Section */}
-      <section ref={heroRef} className="relative min-h-[80vh] flex flex-col justify-center px-4 sm:px-8 w-full mt-[-20px]">
+      <section ref={heroRef} className="relative min-h-[80vh] flex flex-col justify-center px-4 sm:px-8 w-full mt-4 md:mt-[-20px]">
         <div className="absolute inset-0 -z-10 flex items-center justify-center overflow-hidden">
           <div className="absolute w-[200%] h-[200%] bg-[url('/images/aboutlanding.png')] bg-center bg-no-repeat bg-contain opacity-20 blur-sm animate-slow-spin"></div>
         </div>
         
-        <div className="max-w-7xl mx-auto w-full pt-10 pb-32">
-          <motion.div 
-            className="text-center"
-            initial={{ opacity: 0, y: 50 }}
-            animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
+        <div className="max-w-7xl mx-auto w-full pt-20 md:pt-10 pb-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Left side - Text content */}
             <motion.div 
-              className="inline-block mb-6 bg-gradient-to-r from-[#1DB954]/20 to-purple-500/20 px-4 py-1 rounded-full text-sm font-medium text-[#1DB954]"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={isHeroInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-left lg:pr-8"
+              initial={{ opacity: 0, y: 50 }}
+              animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
             >
-              The Future of Music Discovery
+              <motion.div 
+                className="inline-block mb-6 bg-gradient-to-r from-[#1DB954]/20 to-purple-500/20 px-4 py-1 rounded-full text-sm font-medium text-[#1DB954]"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={isHeroInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                AI-Powered Music Discovery
+              </motion.div>
+              <motion.h1 
+                className="text-4xl md:text-6xl font-bold mb-6 tracking-tight leading-tight"
+                initial={{ opacity: 0, y: 20 }}
+                animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+              >
+                Redefine the way you <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1DB954] to-purple-400">discover music</span>
+              </motion.h1>
+              <motion.p 
+                className="text-lg md:text-xl text-[#A3A3A3] mb-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.7, delay: 0.4 }}
+              >
+                Create personalized Spotify playlists powered by AI that understands your unique music taste. Diggr brings back the thrill of discovering music that surprises and delights you.
+              </motion.p>
+              
+              <motion.div 
+                className="flex items-center space-x-2 mb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.7, delay: 0.5 }}
+              >
+                <div className="flex -space-x-2">
+                  {[
+                    "https://randomuser.me/api/portraits/women/32.jpg",
+                    "https://randomuser.me/api/portraits/men/44.jpg",
+                    "https://randomuser.me/api/portraits/women/68.jpg"
+                  ].map((src, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2 border-black overflow-hidden">
+                      <img src={src} alt={`User ${i+1}`} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+                <span className="text-sm text-[#A3A3A3]">Join <span className="text-white font-medium">10,000+</span> music lovers who've discovered new tracks</span>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.7, delay: 0.6 }}
+                className="flex flex-col sm:flex-row gap-4"
+              >
+                {isClient && !isLoading && session ? (
+                  <Link href="/dashboard" className="group relative overflow-hidden rounded-full inline-block">
+                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
+                    <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                    <span className="relative z-20 px-6 py-2.5 inline-block font-medium text-white text-sm md:text-base">Access</span>
+                  </Link>
+                ) : (
+                  <Link href="/auth/register" className="group relative overflow-hidden rounded-full inline-block max-w-xs mx-auto md:mx-0">
+                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
+                    <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
+                    <span className="relative z-20 px-8 py-3 inline-block font-medium text-white">Create Free Account</span>
+                  </Link>
+                )}
+              </motion.div>
+              
+              {/* Mobile carousel layout is now in the main mobile section below */}
             </motion.div>
-            <motion.h1 
-              className="text-5xl md:text-7xl font-bold mb-6 tracking-tight leading-tight"
-              initial={{ opacity: 0, y: 20 }}
-              animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.7, delay: 0.3 }}
-            >
-              Redefine the way you <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1DB954] to-purple-400">discover music</span>
-            </motion.h1>
-            <motion.p 
-              className="text-lg md:text-xl text-[#A3A3A3] max-w-3xl mx-auto mb-12"
-              initial={{ opacity: 0, y: 20 }}
-              animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.7, delay: 0.4 }}
-            >
-              Tired of the same old recommendations? Diggr brings back the thrill of discovering music that actually surprises you—using AI to build playlists that feel personal, curated, and full of soul.
-            </motion.p>
+            
+            {/* Right side - App mockup */}
             <motion.div
+              className="relative hidden lg:block"
+              initial={{ opacity: 0, x: 50 }}
+              animate={isHeroInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 50 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              {/* Grid Layout - Cards with subtle cool hover effect */}
+              <div className="grid grid-cols-3 gap-6 p-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                  className="overflow-hidden rounded-lg shadow-xl relative group cursor-pointer"
+                >
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                    <span className="text-white font-medium text-lg">Mamboo</span>
+                  </div>
+                  <img src="/images/card_1.jpg" alt="Mamboo" className="w-full h-auto transition-transform duration-700 group-hover:scale-105" />
+                </motion.div>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                  className="overflow-hidden rounded-lg shadow-xl relative group cursor-pointer"
+                >
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                    <span className="text-white font-medium text-lg">Rap</span>
+                  </div>
+                  <img src="/images/card_3.jpg" alt="Rap" className="w-full h-auto transition-transform duration-700 group-hover:scale-105" />
+                </motion.div>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                  className="overflow-hidden rounded-lg shadow-xl relative group cursor-pointer"
+                >
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                    <span className="text-white font-medium text-lg">Sambadobrasil</span>
+                  </div>
+                  <img src="/images/card_2.jpg" alt="Sambadobrasil" className="w-full h-auto transition-transform duration-700 group-hover:scale-105" />
+                </motion.div>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                  className="overflow-hidden rounded-lg shadow-xl relative group cursor-pointer"
+                >
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                    <span className="text-white font-medium text-lg">Rock 90s</span>
+                  </div>
+                  <img src="/images/card_4.jpg" alt="Rock 90s" className="w-full h-auto transition-transform duration-700 group-hover:scale-105" />
+                </motion.div>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                  className="overflow-hidden rounded-lg shadow-xl relative group cursor-pointer"
+                >
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                    <span className="text-white font-medium text-lg">IDM</span>
+                  </div>
+                  <img src="/images/card_5.jpg" alt="IDM" className="w-full h-auto transition-transform duration-700 group-hover:scale-105" />
+                </motion.div>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.7 }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                  className="overflow-hidden rounded-lg shadow-xl relative group cursor-pointer"
+                >
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                    <span className="text-white font-medium text-lg">Indie 2000s</span>
+                  </div>
+                  <img src="/images/card_6.jpg" alt="Indie 2000s" className="w-full h-auto transition-transform duration-700 group-hover:scale-105" />
+                </motion.div>
+              </div>
+            </motion.div>
+            
+            {/* Mobile playlist carousel layout */}
+            <motion.div 
+              className="mt-4 lg:hidden relative w-full max-w-sm mx-auto"
               initial={{ opacity: 0, y: 20 }}
               animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ duration: 0.7, delay: 0.5 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              {isClient && !isLoading && session ? (
-                <Link href="/dashboard" className="group relative overflow-hidden rounded-full inline-block">
-                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
-                  <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
-                  <span className="relative z-20 px-8 py-3 inline-block font-medium text-white">Go to Dashboard</span>
-                </Link>
-              ) : (
-                <Link href="/auth/register" className="group relative overflow-hidden rounded-full inline-block">
-                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#1DB954] to-[#1DB954]/80 group-hover:scale-105 transition-transform duration-300"></div>
-                  <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
-                  <span className="relative z-20 px-8 py-3 inline-block font-medium text-white">Get Started</span>
-                </Link>
-              )}
-              <Link href="/create-playlist" className="group relative overflow-hidden rounded-full inline-block">
-                <div className="absolute inset-0 w-full h-full bg-white/10 group-hover:scale-105 transition-transform duration-300"></div>
-                <div className="absolute inset-[2px] rounded-full bg-black/50 backdrop-blur-xl z-10"></div>
-                <span className="relative z-20 px-8 py-3 inline-block font-medium text-white">Try Demo</span>
-              </Link>
+              <div className="relative h-[420px] px-4 flex items-center justify-center">
+                {/* Left card (slightly behind) */}
+                <motion.div
+                  initial={{ opacity: 0, x: -40 }}
+                  animate={{ opacity: 0.9, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                  className="absolute left-4 z-10 w-[30%] overflow-hidden rounded-lg shadow-xl relative group cursor-pointer transform -rotate-6 scale-90 origin-bottom-right"
+                >
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                    <span className="text-white font-medium text-sm">Rock 90s</span>
+                  </div>
+                  <img src="/images/card_4.jpg" alt="Rock 90s" className="w-full h-auto transition-transform duration-700 group-hover:scale-105" />
+                </motion.div>
+                
+                {/* Center card (featured) */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                  className="z-20 w-[55%] overflow-hidden rounded-lg shadow-xl relative group cursor-pointer"
+                >
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                    <span className="text-white font-medium text-lg">Indie 2000s</span>
+                  </div>
+                  <img src="/images/card_3.jpg" alt="Indie 2000s" className="w-full h-auto transition-transform duration-700 group-hover:scale-105" />
+                </motion.div>
+                
+                {/* Right card (slightly behind) */}
+                <motion.div
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 0.9, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                  className="absolute right-4 z-10 w-[30%] overflow-hidden rounded-lg shadow-xl relative group cursor-pointer transform rotate-6 scale-90 origin-bottom-left"
+                >
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                    <span className="text-white font-medium text-sm">Mamboo</span>
+                  </div>
+                  <img src="/images/card_1.jpg" alt="Mamboo" className="w-full h-auto transition-transform duration-700 group-hover:scale-105" />
+                </motion.div>
+                
+
+              </div>
             </motion.div>
-          </motion.div>
+          </div>
+
         </div>
       </section>
 
@@ -168,89 +347,10 @@ export default function Home() {
         <ClientSearchParams />
       </Suspense>
 
-      {/* Demo Generator Card */}
-      <section className="py-16 px-4 sm:px-8 w-full max-w-7xl mx-auto">
-        <motion.div 
-          className="relative"
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true, margin: "-100px" }}
-        >
-          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#1DB954] via-purple-500 to-[#1DB954] opacity-30 blur-xl"></div>
-          <div className="card bg-[#111111]/90 backdrop-blur-md border border-white/5 p-8 rounded-3xl relative overflow-hidden">
-            <div className="absolute right-0 top-0 -mr-40 -mt-40 w-80 h-80 bg-[#1DB954]/10 rounded-full blur-3xl"></div>
-            <div className="absolute left-0 bottom-0 -ml-40 -mb-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl"></div>
-            
-            <motion.h2 
-              className="text-2xl md:text-3xl font-bold mb-8 text-center"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              viewport={{ once: true }}
-            >
-              AI Playlist Generator
-            </motion.h2>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
-              {[
-                { label: "Genre", value: "Rock, Indie, Alternative" },
-                { label: "Era", value: "2000s" },
-                { label: "Mood", value: "Energetic" },
-                { label: "Songs", value: "15" }
-              ].map((item, index) => (
-                <motion.div 
-                  key={item.label}
-                  className="flex flex-col"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-                  viewport={{ once: true }}
-                >
-                  <label className="text-sm text-[#A3A3A3] mb-2">{item.label}</label>
-                  <motion.div 
-                    className="relative bg-[#181818] rounded-xl p-3 border border-white/5 overflow-hidden"
-                    whileHover={{ scale: 1.03 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954]/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="text-[#1DB954] relative z-10">{item.value}</span>
-                  </motion.div>
-                </motion.div>
-              ))}
-            </div>
-            
-            <div className="relative h-6 w-full bg-[#181818] rounded-full mb-8 overflow-hidden">
-              <motion.div 
-                className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#1DB954] to-purple-500 rounded-full"
-                initial={{ width: "0%" }}
-                whileInView={{ width: "85%" }}
-                transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
-                viewport={{ once: true }}
-              />
-              <div className="absolute inset-0 flex items-center justify-end px-4">
-                <span className="text-xs text-white/70">Matching your taste...</span>
-              </div>
-        </div>
 
-            <div className="flex justify-center">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                <Link href="/create-playlist" className="relative group overflow-hidden inline-block rounded-full">
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954] to-purple-500 group-hover:scale-105 transition-transform duration-300"></div>
-                  <span className="relative bg-black/30 backdrop-blur-sm m-[2px] px-8 py-3 rounded-full inline-block font-medium text-white group-hover:bg-black/10 transition-colors duration-300">Create a Playlist</span>
-                </Link>
-              </motion.div>
-            </div>
-          </div>
-        </motion.div>
-      </section>
 
       {/* How It Works */}
-      <section className="py-24 px-4 sm:px-8 w-full">
+      <section id="how-it-works" className="py-0 mt-[-120px] px-4 sm:px-8 w-full">
         <div className="max-w-7xl mx-auto">
           <motion.div 
             className="text-center mb-16"
@@ -264,14 +364,27 @@ export default function Home() {
           </motion.div>
           
           <div className="relative">
-            {/* Connecting line */}
+            {/* Connecting line with animated pulse */}
             <motion.div 
-              className="absolute left-1/2 top-8 bottom-8 w-1 bg-gradient-to-b from-[#1DB954] to-purple-500 hidden md:block"
-              initial={{ scaleY: 0, opacity: 0 }}
-              whileInView={{ scaleY: 1, opacity: 0.3 }}
-              transition={{ duration: 1.5 }}
+              className="absolute left-1/2 top-8 bottom-8 w-1 hidden md:block overflow-hidden"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
               viewport={{ once: true, margin: "-100px" }}
-            />
+            >
+              <div className="h-full w-full bg-gradient-to-b from-[#1DB954] to-purple-500 opacity-30"></div>
+              <motion.div 
+                className="absolute top-0 h-24 w-full bg-white/50 blur-md"
+                initial={{ y: "-100%" }}
+                animate={{ y: "400%" }}
+                transition={{ 
+                  duration: 3, 
+                  repeat: Infinity, 
+                  ease: "linear",
+                  repeatType: "loop"
+                }}
+              />
+            </motion.div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 relative">
               {[
@@ -282,7 +395,9 @@ export default function Home() {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[#1DB954]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                  )
+                  ),
+                  image: "/images/card_1.jpg",
+                  features: ["Genres", "Era", "Mood", "Length"]
                 },
                 {
                   title: "AI Creates Your Playlist",
@@ -291,7 +406,9 @@ export default function Home() {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[#1DB954]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                  )
+                  ),
+                  image: "/images/card_3.jpg",
+                  features: ["AI Matching", "Deep Cuts", "Hidden Gems", "Perfect Flow"]
                 },
                 {
                   title: "Save to Spotify",
@@ -300,7 +417,9 @@ export default function Home() {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[#1DB954]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                     </svg>
-                  )
+                  ),
+                  image: "/images/card_5.jpg",
+                  features: ["One-Click Save", "Share with Friends", "Listen Anywhere", "Regular Updates"]
                 }
               ].map((step, index) => (
                 <motion.div 
@@ -310,15 +429,27 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, delay: index * 0.2 }}
                   viewport={{ once: true, margin: "-100px" }}
+                  whileHover={{ y: -5, transition: { duration: 0.2 } }}
                 >
                   <div className="bg-[#111111] backdrop-filter backdrop-blur-lg bg-opacity-80 rounded-3xl border border-white/5 p-8 h-full relative overflow-hidden group">
                     {/* Animated gradient background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#1DB954]/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-in-out"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#1DB954]/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-in-out"></div>
                     
-                    {/* Numbered circle */}
+                    {/* Numbered circle with animated pulse */}
                     <div className="absolute top-8 right-8 flex items-center justify-center">
                       <div className="relative flex items-center justify-center w-12 h-12">
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#1DB954]/20 to-purple-500/20 rounded-full animate-pulse"></div>
+                        <motion.div 
+                          className="absolute inset-0 bg-gradient-to-r from-[#1DB954]/30 to-purple-500/30 rounded-full"
+                          animate={{ 
+                            scale: [1, 1.2, 1],
+                            opacity: [0.5, 0.8, 0.5]
+                          }}
+                          transition={{ 
+                            duration: 2, 
+                            repeat: Infinity,
+                            repeatType: "loop"
+                          }}
+                        />
                         <div className="absolute inset-[3px] bg-[#111111] rounded-full"></div>
                         <span className="relative z-10 text-2xl font-bold text-[#1DB954]">{index + 1}</span>
                       </div>
@@ -328,7 +459,25 @@ export default function Home() {
                       {step.icon}
                     </div>
                     <h3 className="text-xl font-bold mb-4 relative z-10">{step.title}</h3>
-                    <p className="text-[#A3A3A3] relative z-10">{step.description}</p>
+                    <p className="text-[#A3A3A3] relative z-10 mb-6">{step.description}</p>
+                    
+                    {/* Feature tags */}
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      {step.features.map((feature, i) => (
+                        <motion.span 
+                          key={i}
+                          className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-white/80"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.5 + (i * 0.1) }}
+                          viewport={{ once: true }}
+                        >
+                          {feature}
+                        </motion.span>
+                      ))}
+                    </div>
+                    
+
                     
                     {/* Decorative elements */}
                     <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-gradient-to-br from-[#1DB954]/10 to-transparent rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
@@ -519,71 +668,85 @@ export default function Home() {
             transition={{ duration: 0.7 }}
             viewport={{ once: true, margin: "-100px" }}
           >
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">Why Users Love Diggr</h2>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Designed For</h2>
             <div className="h-1 w-20 bg-gradient-to-r from-[#1DB954] to-purple-500 mx-auto rounded-full"></div>
           </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          {/* User Types Grid */}
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            viewport={{ once: true, margin: "-100px" }}
+          >
             {[
               {
-                text: "This app is amazing! It created a playlist that perfectly matched my music taste. The connection with Spotify is seamless, and I love how I can customize everything.",
-                author: "Alex M.",
-                image: "https://randomuser.me/api/portraits/men/32.jpg",
-                delay: 0
+                title: "DJs",
+                description: "Discover rare tracks and perfect transitions that will set your mixes apart.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#1DB954]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                )
               },
               {
-                text: "I've discovered so many new artists thanks to this tool. It's like having a personal DJ that knows exactly what I'll enjoy. The user interface is beautiful and easy to use.",
-                author: "Sarah K.",
-                image: "https://randomuser.me/api/portraits/women/44.jpg",
-                delay: 0.2
+                title: "Producers",
+                description: "Find inspiration and reference tracks that spark your creativity in the studio.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#1DB954]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                  </svg>
+                )
+              },
+              {
+                title: "Enthusiasts",
+                description: "Expand your musical horizons with personalized recommendations that match your taste.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-[#1DB954]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                )
               }
-            ].map((testimonial, index) => (
+            ].map((userType, index) => (
               <motion.div
                 key={index}
                 className="relative"
-                initial={{ opacity: 0, y: 50 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: testimonial.delay }}
-                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.5, delay: index * 0.2 }}
+                viewport={{ once: true }}
+                whileHover={{ 
+                  y: -10, 
+                  scale: 1.03,
+                  transition: { 
+                    type: "spring", 
+                    stiffness: 400, 
+                    damping: 10 
+                  } 
+                }}
               >
-                <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-[#1DB954]/30 to-purple-500/30 opacity-60 blur-lg"></div>
-                <motion.div 
-                  className="relative bg-[#111111] rounded-3xl border border-white/5 p-8 h-full"
-                  whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}
-                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                >
-                  {/* Quote icon */}
-                  <div className="absolute -top-6 -left-2 text-[#1DB954]/10">
-                    <svg width="80" height="80" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M10 11H6.5C5.66 11 5 10.34 5 9.5V9C5 7.34 6.34 6 8 6H8.5C8.78 6 9 5.78 9 5.5V4.5C9 4.22 8.78 4 8.5 4H8C5.24 4 3 6.24 3 9V15C3 16.66 4.34 18 6 18H10C11.66 18 13 16.66 13 15V14C13 12.34 11.66 11 10 11ZM21 11H17.5C16.66 11 16 10.34 16 9.5V9C16 7.34 17.34 6 19 6H19.5C19.78 6 20 5.78 20 5.5V4.5C20 4.22 19.78 4 19.5 4H19C16.24 4 14 6.24 14 9V15C14 16.66 15.34 18 17 18H21C22.66 18 24 16.66 24 15V14C24 12.34 22.66 11 21 11Z" />
-                    </svg>
-                  </div>
+                <div className="group bg-[#111111] rounded-2xl border border-white/10 p-8 h-full relative overflow-hidden">
+                  {/* Green-purple reflection */}
+                  <div className="absolute -inset-1 bg-gradient-to-br from-[#1DB954]/20 via-transparent to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-xl"></div>
                   
-                  <div className="flex mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <svg key={i} xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#1DB954]" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-                  
-                  <p className="text-[#F5F5F7] mb-8 italic relative z-10">{testimonial.text}</p>
-                  
-                  <div className="flex items-center">
-                    <div className="w-12 h-12 rounded-full overflow-hidden mr-4 border-2 border-[#1DB954]">
-                      <img src={testimonial.image} alt={testimonial.author} className="w-full h-full object-cover" />
+                  <div className="relative z-10">
+                    <div className="mb-6 transform group-hover:scale-110 transition-transform duration-300">
+                      {userType.icon}
                     </div>
-                    <div className="font-semibold">{testimonial.author}</div>
+                    
+                    <h3 className="text-2xl font-bold mb-3">{userType.title}</h3>
+                    <p className="text-[#A3A3A3]">{userType.description}</p>
                   </div>
-                </motion.div>
+                </div>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section className="py-24 px-4 sm:px-8 w-full overflow-hidden">
+      <section id="pricing" className="py-24 px-4 sm:px-8 w-full overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <motion.div 
             className="text-center mb-16"
@@ -723,7 +886,7 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-4 sm:px-8 w-full">
+      <section id="contact" className="py-20 px-4 sm:px-8 w-full">
         <motion.div 
           className="max-w-7xl mx-auto"
           initial={{ opacity: 0, y: 50 }}
@@ -832,38 +995,23 @@ export default function Home() {
                 Diggr brings the soul of vinyl crate digging into the digital age, helping you discover music that feels personal and curated.
               </motion.p>
               <motion.div
-                className="flex space-x-4"
+                className="flex"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 viewport={{ once: true }}
               >
-                {['twitter', 'facebook', 'instagram'].map(social => (
-                  <a 
-                    key={social} 
-                    href={`https://${social}.com`} 
-                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#1DB954]/20 transition-colors duration-300"
-                    aria-label={social}
-                  >
-                    <span className="text-[#A3A3A3] hover:text-[#1DB954]">
-                      {social === 'twitter' && (
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
-                        </svg>
-                      )}
-                      {social === 'facebook' && (
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      {social === 'instagram' && (
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </span>
-                  </a>
-                ))}
+                <a 
+                  href="https://x.com" 
+                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#1DB954]/20 transition-colors duration-300"
+                  aria-label="X (formerly Twitter)"
+                >
+                  <span className="text-[#A3A3A3] hover:text-[#1DB954]">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                  </span>
+                </a>
               </motion.div>
             </div>
             
@@ -876,13 +1024,26 @@ export default function Home() {
             >
               <h3 className="text-lg font-medium mb-4">Navigation</h3>
               <ul className="space-y-3">
-                {['Home', 'About', 'How It Works', 'Pricing', 'Contact'].map(link => (
-                  <li key={link}>
-                    <Link href={`/${link.toLowerCase().replace(' ', '-')}`} className="text-[#A3A3A3] hover:text-[#1DB954] transition-colors">
-                      {link}
-            </Link>
-                  </li>
-                ))}
+                <li>
+                  <Link href="/" className="text-[#A3A3A3] hover:text-[#1DB954] transition-colors">
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <a href="#how-it-works" className="text-[#A3A3A3] hover:text-[#1DB954] transition-colors">
+                    How It Works
+                  </a>
+                </li>
+                <li>
+                  <a href="#pricing" className="text-[#A3A3A3] hover:text-[#1DB954] transition-colors">
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <Link href="/contact" className="text-[#A3A3A3] hover:text-[#1DB954] transition-colors">
+                    Contact
+                  </Link>
+                </li>
               </ul>
             </motion.div>
             
@@ -894,12 +1055,12 @@ export default function Home() {
               viewport={{ once: true }}
             >
               <h3 className="text-lg font-medium mb-4">Legal</h3>
-              <ul className="space-y-3">
-                {['Terms of Service', 'Privacy Policy', 'Cookie Policy', 'GDPR'].map(link => (
+                            <ul className="space-y-3">
+                {['Terms of Service', 'Privacy Policy', 'Cookie Policy'].map(link => (
                   <li key={link}>
                     <Link href={`/${link.toLowerCase().replace(/ /g, '-')}`} className="text-[#A3A3A3] hover:text-[#1DB954] transition-colors">
                       {link}
-            </Link>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -926,4 +1087,45 @@ export default function Home() {
       </footer>
     </div>
   );
-} 
+}
+
+const PlaylistCard = ({ image, title, tracks, genre, className }) => {
+  // Extract the card number from the image path
+  const cardNumber = image.match(/card_(\d+)/)?.[1] || "1";
+  
+  return (
+    <motion.div
+      className={`${className} bg-[#121212] rounded-xl overflow-hidden shadow-lg`}
+      whileHover={{ 
+        y: -5, 
+        transition: { duration: 0.2 } 
+      }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Use the full image as provided in the design */}
+      <img src={image} alt={title} className="w-full aspect-square object-cover" />
+      
+      <div className="p-4 bg-[#121212]">
+        <h3 className="font-medium text-white text-lg">{title}</h3>
+        <p className="text-sm text-[#A3A3A3]">Created with Diggr · AI-powered music discovery</p>
+        <div className="flex items-center mt-2 text-xs text-[#A3A3A3]">
+          <span>{tracks} tracks</span>
+          <span className="mx-2">•</span>
+          <span>{genre}</span>
+        </div>
+        <div className="mt-3 flex justify-between items-center">
+          <button className="bg-[#1DB954] hover:bg-[#1DB954]/90 text-white py-1 px-4 rounded-full text-sm font-medium">
+            View Details
+          </button>
+          <button className="bg-black/30 hover:bg-black/20 rounded-full p-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#1DB954">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}; 
