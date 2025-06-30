@@ -60,14 +60,14 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/favicons/favicon.ico" />
         <link rel="apple-touch-icon" href="/images/diggr.png" />
         <meta name="msapplication-TileImage" content="/favicons/favicon.ico" />
+        <meta name="google-adsense-account" content="ca-pub-3838039470797804" />
         
         {/* Google AdSense Verification */}
-        <Script
-          async
+        <script 
+          async 
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3838039470797804"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        ></script>
         
         {/* Google Analytics */}
         <Script
